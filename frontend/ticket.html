@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="ticket-page">
+  <header class="simple-header light no-print">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <a class="back-link" href="index.html">Book another movie</a>
+  </header>
+  <main>
+    <p class="notice visible centered" id="ticketMessage">Loading ticket...</p>
+    <article class="ticket hidden" id="ticket">
+      <div class="ticket-status">Booking confirmed</div>
+      <h1 id="movieName"></h1>
+      <p class="muted" id="showMeta"></p>
+      <p class="email-status" id="emailStatus"></p>
+      <div class="ticket-details">
+        <div><small>Seats</small><strong id="seatList"></strong></div>
+        <div><small>Amount paid</small><strong id="amount"></strong></div>
+        <div><small>Booking ID</small><strong id="reference"></strong></div>
+      </div>
+      <div class="qr">
+        <img id="qrCode" alt="Ticket QR code">
+        <p>Show this QR code at the entrance</p>
+      </div>
+      <button class="button no-print" id="printButton" type="button">Print ticket</button>
+    </article>
+  </main>
+  <script src="app.js"></script>
+  <script src="ticket.js"></script>
+</body>
+</html>

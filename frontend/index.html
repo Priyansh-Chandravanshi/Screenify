@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screenify | Movies and Tickets</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <label class="search-box" aria-label="Search movies">
+      <input id="search" type="search" placeholder="Search movies, genres...">
+    </label>
+    <div class="nav-right">
+      <button class="location" id="openCity" type="button"><span id="selectedCity">Select city</span></button>
+      <a class="button ghost" id="accountButton" href="login.html">Sign in</a>
+    </div>
+  </header>
+  <nav class="menu" aria-label="Explore">
+    <a class="active" href="#movies">Movies</a>
+    <a href="#premieres">Premieres</a>
+    <a href="#experiences">Experiences</a>
+    <a href="#movies">Now Showing</a>
+  </nav>
+
+  <main>
+    <section class="hero" aria-label="Featured movies">
+      <div class="slides" id="slides"></div>
+      <button class="slide-control previous" id="previousSlide" type="button" aria-label="Previous movie">&lt;</button>
+      <button class="slide-control next" id="nextSlide" type="button" aria-label="Next movie">&gt;</button>
+    </section>
+
+    <section class="content-section" id="movies">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Now showing</p>
+          <h1>Recommended movies</h1>
+        </div>
+        <p class="muted" id="movieCount"></p>
+      </div>
+      <p class="notice" id="movieMessage">Loading movies...</p>
+      <div class="movie-grid" id="movieList"></div>
+    </section>
+
+    <section class="experiences" id="experiences">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">More than movies</p>
+          <h2>Live experiences</h2>
+        </div>
+      </div>
+      <div class="experience-grid">
+        <article><p>LIVE</p><h3>Stand-up nights</h3><span>Fresh line-ups weekly</span></article>
+        <article><p>MUSIC</p><h3>Concert tours</h3><span>Feel every beat live</span></article>
+        <article><p>FAMILY</p><h3>Weekend plays</h3><span>Stories for everyone</span></article>
+      </div>
+    </section>
+
+    <section class="premiere" id="premieres">
+      <p class="eyebrow">Screenify Premiere</p>
+      <h2>New releases. First weekend energy.</h2>
+      <p>Reserve your seats before the best screens fill up.</p>
+      <a class="button" href="#movies">Explore tickets</a>
+    </section>
+  </main>
+
+  <dialog class="city-modal" id="cityModal">
+    <form method="dialog" class="modal-card">
+      <div class="modal-header">
+        <h2>Choose your city</h2>
+        <button class="icon-button" value="cancel" aria-label="Close">x</button>
+      </div>
+      <input id="citySearch" class="field" type="search" placeholder="Search city">
+      <div id="cityList" class="city-list"></div>
+    </form>
+  </dialog>
+
+  <footer class="footer">
+    <p>Screenify &copy; 2026. Tickets made simple.</p>
+    <p class="tmdb-credit">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+  </footer>
+  <script src="app.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

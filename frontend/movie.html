@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Details | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-page">
+  <header class="simple-header">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <a class="back-link" href="index.html">Back to movies</a>
+  </header>
+  <main>
+    <p class="notice visible centered" id="message">Loading movie...</p>
+    <section class="movie-banner hidden" id="movieBanner">
+      <img id="poster" class="poster" alt="">
+      <div class="movie-info">
+        <p class="eyebrow">Now showing</p>
+        <h1 id="title"></h1>
+        <p class="movie-meta" id="details"></p>
+        <div class="formats"><span>2D</span><span>IMAX</span><span>Dolby Audio</span></div>
+        <p class="synopsis" id="synopsis"></p>
+        <button class="button large" id="bookButton" type="button">Select showtime</button>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="movie.js"></script>
+</body>
+</html>

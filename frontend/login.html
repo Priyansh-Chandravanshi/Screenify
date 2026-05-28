@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+  <a class="logo auth-logo" href="index.html"><span>S</span> Screenify</a>
+  <main class="auth-card">
+    <p class="eyebrow">Welcome to Screenify</p>
+    <h1 id="authHeading">Sign in</h1>
+    <p class="muted" id="authDescription">Book faster and keep your ticket details in one place.</p>
+    <form id="authForm">
+      <label class="register-only hidden">Full name<input class="field" id="name" autocomplete="name"></label>
+      <label>Email<input class="field" id="email" type="email" autocomplete="email" required></label>
+      <label>Password<input class="field" id="password" type="password" autocomplete="current-password" required></label>
+      <p class="notice" id="authMessage"></p>
+      <button class="button block large" type="submit" id="submitButton">Sign in</button>
+    </form>
+    <button class="text-button" id="toggleMode" type="button">New here? Create an account</button>
+  </main>
+  <script src="app.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select a Show | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="surface-page">
+  <header class="simple-header light">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <a class="back-link" href="index.html">Movies</a>
+  </header>
+  <main class="show-page">
+    <section class="show-movie-card" id="movieCard">
+      <img id="showPoster" class="small-poster" alt="">
+      <div>
+        <p class="eyebrow">Book tickets</p>
+        <h1 id="movieTitle">Loading...</h1>
+        <p class="muted" id="movieMeta"></p>
+      </div>
+    </section>
+    <p class="listing-note">Movie information is sourced from TMDB. Theatre showtimes below are Screenify demo listings for this project.</p>
+    <div class="date-filter" id="dateFilter"></div>
+    <p class="notice visible" id="showMessage">Loading showtimes...</p>
+    <section class="theatre-list" id="showList"></section>
+  </main>
+  <script src="app.js"></script>
+  <script src="shows.js"></script>
+</body>
+</html>

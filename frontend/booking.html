@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose Seats | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="surface-page">
+  <header class="simple-header light">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <div class="booking-title">
+      <strong id="movieTitle">Seat selection</strong>
+      <small id="showDetails"></small>
+    </div>
+  </header>
+  <main class="seat-page">
+    <p class="notice visible" id="seatMessage">Loading available seats...</p>
+    <section class="seat-layout hidden" id="seatLayout">
+      <div class="screen">SCREEN THIS WAY</div>
+      <div class="seat-grid" id="seats" aria-label="Available seats"></div>
+      <div class="legend">
+        <span><i class="seat sample"></i> Available</span>
+        <span><i class="seat sample selected"></i> Selected</span>
+        <span><i class="seat sample booked"></i> Sold</span>
+      </div>
+    </section>
+    <aside class="summary-card hidden" id="summary">
+      <h2>Booking summary</h2>
+      <p class="muted">Seats</p>
+      <p id="selectedSeats">None selected</p>
+      <div class="summary-total"><span>Payable amount</span><strong id="total">INR 0</strong></div>
+      <button class="button block" id="proceedButton" type="button" disabled>Proceed to pay</button>
+    </aside>
+  </main>
+  <script src="app.js"></script>
+  <script src="booking.js"></script>
+</body>
+</html>
