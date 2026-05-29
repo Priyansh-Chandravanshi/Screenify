@@ -19,10 +19,43 @@
         <p class="eyebrow">Now showing</p>
         <h1 id="title"></h1>
         <p class="movie-meta" id="details"></p>
+        <div class="rating-panel">
+          <strong id="ratingScore"></strong>
+          <span>Audience rating</span>
+        </div>
         <div class="formats"><span>2D</span><span>IMAX</span><span>Dolby Audio</span></div>
         <p class="synopsis" id="synopsis"></p>
-        <button class="button large" id="bookButton" type="button">Select showtime</button>
+        <div class="detail-actions">
+          <button class="button large" id="bookButton" type="button">Select showtime</button>
+          <a class="button ghost large hidden" id="trailerButton" href="#" target="_blank" rel="noopener">Watch trailer</a>
+        </div>
       </div>
+    </section>
+    <section class="movie-deep-dive hidden" id="movieDeepDive">
+      <article>
+        <p class="eyebrow">About</p>
+        <h2>About the movie</h2>
+        <p id="aboutMovie"></p>
+      </article>
+      <article>
+        <p class="eyebrow">Cast</p>
+        <h2>Cast actors</h2>
+        <div class="people-list" id="castList"></div>
+      </article>
+      <article>
+        <p class="eyebrow">Crew</p>
+        <h2>Crew</h2>
+        <div class="people-list" id="crewList"></div>
+      </article>
+    </section>
+    <section class="review-section hidden" id="reviewSection">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Audience voice</p>
+          <h2>Top reviews</h2>
+        </div>
+      </div>
+      <div class="review-grid" id="reviewList"></div>
     </section>
   </main>
   <script src="app.js"></script>

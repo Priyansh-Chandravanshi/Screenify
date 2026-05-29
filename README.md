@@ -49,6 +49,27 @@ npm run sync:movies
 ```
 
 The importer removes the four fictional starter movies and loads current now-playing titles for region `IN`, while preserving seats on already-created imported shows.
+If `TMDB_ACCESS_TOKEN` is still the placeholder value, the same command seeds a curated real-release fallback catalogue with demo showtimes so the app is usable while you arrange a TMDB token.
+
+Add one custom movie with demo shows:
+
+```powershell
+cd backend
+copy scripts\movie.example.json scripts\my-movie.json
+# edit scripts\my-movie.json
+npm run add:movie -- scripts\my-movie.json
+```
+
+If TMDB is unavailable, update official poster URLs manually:
+
+```powershell
+cd backend
+copy scripts\posters.example.json scripts\posters.json
+# edit scripts\posters.json and paste direct image URLs
+npm run update:posters -- scripts\posters.json
+```
+
+To get a direct image URL, open the poster image in a browser, right-click the image, choose "Copy image address", and paste that URL into `poster`.
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
 
@@ -72,6 +93,16 @@ MAIL_FROM=Screenify <your-email@gmail.com>
 ```
 
 Do not use your regular Gmail password and do not commit `.env`.
+
+Check SMTP credentials:
+
+```powershell
+cd backend
+npm run check:mail
+```
+
+For Gmail, `EAUTH 535 Username and Password not accepted` means the Gmail address/app password in `.env` is invalid or app-password access is not enabled for that account.
+If SMTP fails during booking, Screenify now saves a local HTML email preview in `backend/mail-previews` and shows an "Open preview" link on the ticket page. This keeps demos usable while Gmail credentials are being fixed.
 
 ## Run Locally
 

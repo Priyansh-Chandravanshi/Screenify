@@ -1,0 +1,37 @@
+{
+  "title": "Example Movie",
+  "poster": "https://example.com/poster.jpg",
+  "duration": 130,
+  "rating": 8.4,
+  "category": "Bollywood",
+  "genre": "Action / Drama",
+  "language": "Hindi",
+  "certificate": "UA",
+  "synopsis": "Short movie description for the detail page.",
+  "about": "Longer about text for the movie detail page.",
+  "cast": [
+    {
+      "name": "Actor One",
+      "role": "Lead actor",
+      "photo": "https://example.com/actor-one.jpg"
+    }
+  ],
+  "crew": [
+    {
+      "name": "Director Name",
+      "role": "Director",
+      "photo": "https://example.com/director.jpg"
+    }
+  ],
+  "reviews": [
+    {
+      "name": "Priya",
+      "rating": 9,
+      "text": "Great pacing and premium theatre feel."
+    }
+  ],
+  "platform": "Theatre",
+  "trailerUrl": "https://www.youtube.com/results?search_query=Example+Movie+official+trailer",
+  "releaseDate": "2026-06-01",
+  "catalogueTag": "New release"
+}

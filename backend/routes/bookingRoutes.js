@@ -5,10 +5,14 @@ const { RequestError } = require('../lib/validators');
 const { sendTicketEmail } = require('../lib/mailer');
 
 const router = express.Router();
-const ROWS = ['A', 'B', 'C', 'D', 'E'];
+const DEFAULT_SEAT_COLUMNS = 10;
 
-function labelForSeat(index) {
-  return `${ROWS[Math.floor(index / 8)]}${(index % 8) + 1}`;
+function seatColumns(seatCount = 0) {
+  return seatCount >= 100 ? DEFAULT_SEAT_COLUMNS : 8;
+}
+
+function labelForSeat(index, columns = DEFAULT_SEAT_COLUMNS) {
+  return `${String.fromCharCode(65 + Math.floor(index / columns))}${(index % columns) + 1}`;
 }
 
 function bookingReference() {
@@ -26,7 +30,7 @@ router.post('/book', async (req, res, next) => {
     if (!showId) {
       throw new RequestError('Choose a valid show.');
     }
-    if (!seats.length || seats.some(seat => !Number.isInteger(seat) || seat < 0 || seat >= 40)) {
+    if (!seats.length || seats.some(seat => !Number.isInteger(seat) || seat < 0)) {
       throw new RequestError('Choose valid seats before payment.');
     }
     if (!['upi', 'card', 'netbanking'].includes(paymentMethod)) {
@@ -49,6 +53,9 @@ router.post('/book', async (req, res, next) => {
       if (!movieSnapshot.exists) {
         throw new RequestError('Movie for this show was not found.', 404);
       }
+      if (seats.some(seat => seat >= show.seats.length)) {
+        throw new RequestError('Choose valid seats before payment.');
+      }
       if (seats.some(seat => show.seats[seat] === 1)) {
         throw new RequestError('One or more seats were just booked. Please choose again.', 409);
       }
@@ -57,12 +64,13 @@ router.post('/book', async (req, res, next) => {
       seats.forEach(seat => {
         updatedSeats[seat] = 1;
       });
+      const columns = seatColumns(show.seats.length);
       const bookingData = {
         reference: bookingReference(),
         movieId: show.movieId,
         showId,
         seats,
-        seatLabels: seats.map(labelForSeat),
+        seatLabels: seats.map(seat => labelForSeat(seat, columns)),
         amount: seats.length * show.price,
         customerEmail,
         paymentMethod,
@@ -83,6 +91,9 @@ router.post('/book', async (req, res, next) => {
     const email = await sendTicketEmail(booking);
     const emailDelivery = {
       status: email.status,
+      reason: email.reason || '',
+      code: email.code || '',
+      previewUrl: email.previewUrl || '',
       updatedAt: new Date().toISOString()
     };
     await bookingDocument.update({ emailDelivery });

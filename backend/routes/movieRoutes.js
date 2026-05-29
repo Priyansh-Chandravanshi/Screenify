@@ -13,15 +13,45 @@ function requireAdmin(req, res, next) {
 }
 
 function moviePayload(body = {}) {
+  const cast = Array.isArray(body.cast) ? body.cast.slice(0, 12) : [];
+  const crew = Array.isArray(body.crew) ? body.crew.slice(0, 12) : [];
+  const reviews = Array.isArray(body.reviews) ? body.reviews.slice(0, 6) : [];
+
   return {
     title: requiredString(body.title, 'Title'),
     poster: optionalString(body.poster),
     duration: numberInRange(body.duration, 'Duration', 1, 500),
     rating: numberInRange(body.rating, 'Rating', 0, 10, 8),
+    category: optionalString(body.category, 'Bollywood', 40),
     genre: optionalString(body.genre, 'Drama', 80),
     language: optionalString(body.language, 'Hindi', 50),
     certificate: optionalString(body.certificate, 'UA', 20),
+    platform: optionalString(body.platform, '', 80),
+    trailerUrl: optionalString(body.trailerUrl, '', 500),
+    about: optionalString(body.about || body.synopsis, '', 1200),
+    cast: cast.map(personPayload),
+    crew: crew.map(personPayload),
+    reviews: reviews.map(reviewPayload),
     synopsis: optionalString(body.synopsis)
+  };
+}
+
+function personPayload(value) {
+  if (value && typeof value === 'object') {
+    return {
+      name: optionalString(value.name, 'Unknown', 120),
+      role: optionalString(value.role, '', 120),
+      photo: optionalString(value.photo, '', 500)
+    };
+  }
+  return { name: optionalString(value, 'Unknown', 120), role: '', photo: '' };
+}
+
+function reviewPayload(value) {
+  return {
+    name: optionalString(value?.name, 'Screenify user', 80),
+    rating: numberInRange(value?.rating, 'Review rating', 0, 10, 8),
+    text: optionalString(value?.text, 'Loved the big-screen experience.', 300)
   };
 }
 

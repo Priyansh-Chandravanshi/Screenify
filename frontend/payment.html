@@ -16,6 +16,11 @@
       <p class="eyebrow">Demo checkout</p>
       <h1>Select payment method</h1>
       <p class="muted">Demo mode: no real payment will be charged.</p>
+      <div class="secure-checks">
+        <span>Seat lock active</span>
+        <span>Instant ticket</span>
+        <span>No real charge</span>
+      </div>
       <label class="receipt-email">Ticket email
         <input class="field" id="customerEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <small>Your confirmed ticket will be emailed to this address.</small>
@@ -45,11 +50,27 @@
       <h2>Order summary</h2>
       <h3 id="movieName"></h3>
       <p class="muted" id="showMeta"></p>
+      <div class="order-row"><span>Convenience fee</span><strong>Included</strong></div>
       <div class="order-row"><span>Seats</span><strong id="seatList"></strong></div>
       <div class="order-row total"><span>Total</span><strong id="amount"></strong></div>
     </aside>
   </main>
-  <div class="processing hidden" id="processing"><div class="spinner"></div><p>Confirming your seats...</p></div>
+  <div class="processing hidden" id="processing" aria-live="polite">
+    <div class="payment-animation">
+      <div class="pay-card">
+        <span></span>
+        <strong id="animationAmount">INR 0</strong>
+      </div>
+      <div class="pay-wave"></div>
+      <div class="pay-check">✓</div>
+    </div>
+    <p id="processingText">Confirming your seats...</p>
+    <div class="processing-steps">
+      <span class="active">Payment</span>
+      <span>Seat lock</span>
+      <span>Ticket</span>
+    </div>
+  </div>
   <script src="app.js"></script>
   <script src="payment.js"></script>
 </body>

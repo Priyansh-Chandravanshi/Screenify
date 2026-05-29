@@ -17,8 +17,17 @@ if (!booking) {
   if (booking.emailDelivery?.status === 'sent') {
     emailStatus.textContent = `Ticket emailed to ${booking.customerEmail}`;
     emailStatus.className = 'email-status success';
+  } else if (booking.emailDelivery?.status === 'preview_saved') {
+    emailStatus.className = 'email-status warning';
+    if (booking.emailDelivery.previewUrl) {
+      emailStatus.innerHTML = `Email SMTP failed, but a ticket email preview was saved. <a href="${booking.emailDelivery.previewUrl}" target="_blank" rel="noopener">Open preview</a>`;
+    } else {
+      emailStatus.textContent = 'Email SMTP failed, but booking is confirmed. Keep this ticket page saved.';
+    }
   } else if (booking.emailDelivery?.status === 'failed') {
-    emailStatus.textContent = 'Booking confirmed, but email delivery failed. Keep this ticket page saved.';
+    emailStatus.textContent = booking.emailDelivery.reason
+      ? `Booking confirmed, but email failed: ${booking.emailDelivery.reason}`
+      : 'Booking confirmed, but email delivery failed. Keep this ticket page saved.';
     emailStatus.className = 'email-status warning';
   } else {
     emailStatus.textContent = 'Booking confirmed. Email delivery will work once mail settings are configured.';

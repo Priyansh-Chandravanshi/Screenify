@@ -43,6 +43,7 @@ if (!checkout) {
   document.getElementById('seatList').textContent = checkout.seatLabels.join(', ');
   document.getElementById('amount').textContent = money(checkout.amount);
   document.getElementById('payButton').textContent = `Confirm booking - ${money(checkout.amount)}`;
+  document.getElementById('animationAmount').textContent = money(checkout.amount);
 }
 
 document.querySelectorAll('input[name="method"]').forEach(input => {
@@ -67,6 +68,7 @@ form.addEventListener('submit', async event => {
   const processing = document.getElementById('processing');
   const payButton = document.getElementById('payButton');
   processing.classList.remove('hidden');
+  runPaymentAnimation();
   payButton.disabled = true;
   message.className = 'notice';
 
@@ -89,3 +91,26 @@ form.addEventListener('submit', async event => {
     setMessage(message, error.message, 'error visible');
   }
 });
+
+function runPaymentAnimation() {
+  const steps = Array.from(document.querySelectorAll('.processing-steps span'));
+  const text = document.getElementById('processingText');
+  const labels = [
+    'Validating demo payment...',
+    'Locking your selected seats...',
+    'Generating ticket and email...'
+  ];
+  steps.forEach(step => step.classList.remove('active', 'done'));
+  steps[0].classList.add('active');
+  text.textContent = labels[0];
+
+  labels.forEach((label, index) => {
+    window.setTimeout(() => {
+      steps.forEach((step, stepIndex) => {
+        step.classList.toggle('done', stepIndex < index);
+        step.classList.toggle('active', stepIndex === index);
+      });
+      text.textContent = label;
+    }, index * 900);
+  });
+}

@@ -3,6 +3,9 @@ const cities = ['Indore', 'Bhopal', 'Jaipur', 'Mumbai', 'Delhi', 'Pune', 'Hydera
 let movies = [];
 let slideIndex = 0;
 let slideTimer;
+let activeGenre = 'All';
+let activeCategory = 'All';
+const categories = ['All', 'Bollywood', 'South Indian', 'Hollywood', 'Web Series', 'Thriller'];
 
 const movieList = document.getElementById('movieList');
 const movieMessage = document.getElementById('movieMessage');
@@ -18,30 +21,93 @@ function movieCard(movie) {
   card.className = 'movie-card';
 
   const image = document.createElement('img');
-  image.src = poster(movie.poster);
+  image.src = poster(movie.poster, movie.title, movie.genre);
   image.alt = `${movie.title} poster`;
   image.loading = 'lazy';
+
+  const badge = document.createElement('span');
+  badge.className = 'movie-badge';
+  badge.textContent = movie.catalogueTag || (movie.releaseDate ? 'New release' : 'Now showing');
 
   const title = document.createElement('h3');
   title.textContent = movie.title;
   const details = document.createElement('p');
-  details.textContent = `${movie.genre} | ${movie.duration} min`;
+  details.textContent = `${movieCategory(movie)} | ${movie.genre} | ${movie.language || 'Hindi'} | ${movie.duration} min`;
   const rating = document.createElement('span');
   rating.className = 'rating';
-  rating.textContent = `Rating ${Number(movie.rating || 0).toFixed(1)}/10`;
+  rating.textContent = `${Number(movie.rating || 0).toFixed(1)}/10 audience score`;
   const button = document.createElement('button');
   button.className = 'button block';
   button.type = 'button';
   button.textContent = 'Book tickets';
   button.addEventListener('click', () => chooseMovie(movie));
 
-  card.append(image, title, details, rating, button);
+  card.append(image, badge, title, details, rating, button);
   return card;
+}
+
+function filteredMovies() {
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  return movies.filter(movie => {
+    const matchesQuery = !query ||
+      movie.title.toLowerCase().includes(query) ||
+      movie.genre.toLowerCase().includes(query) ||
+      movieCategory(movie).toLowerCase().includes(query) ||
+      String(movie.language || '').toLowerCase().includes(query);
+    const matchesGenre = activeGenre === 'All' || movie.genre === activeGenre;
+    const matchesCategory = activeCategory === 'All' || movieCategory(movie) === activeCategory;
+    return matchesQuery && matchesGenre && matchesCategory;
+  });
+}
+
+function movieCategory(movie) {
+  if (movie.category) return movie.category;
+  const language = String(movie.language || '').toLowerCase();
+  if (['tamil', 'telugu', 'malayalam', 'kannada'].includes(language)) return 'South Indian';
+  if (language === 'english') return 'Hollywood';
+  return 'Bollywood';
+}
+
+function renderCategoryFilters() {
+  const container = document.getElementById('categoryFilters');
+  container.replaceChildren();
+  categories.forEach(category => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `filter-chip category-chip ${category === activeCategory ? 'active' : ''}`;
+    button.textContent = category;
+    button.addEventListener('click', () => {
+      activeCategory = category;
+      renderCategoryFilters();
+      renderGenreFilters();
+      renderMovies(filteredMovies());
+    });
+    container.appendChild(button);
+  });
+}
+
+function renderGenreFilters() {
+  const container = document.getElementById('genreFilters');
+  const source = activeCategory === 'All' ? movies : movies.filter(movie => movieCategory(movie) === activeCategory);
+  const genres = ['All', ...new Set(source.map(movie => movie.genre).filter(Boolean))];
+  container.replaceChildren();
+  genres.forEach(genre => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `filter-chip ${genre === activeGenre ? 'active' : ''}`;
+    button.textContent = genre;
+    button.addEventListener('click', () => {
+      activeGenre = genre;
+      renderGenreFilters();
+      renderMovies(filteredMovies());
+    });
+    container.appendChild(button);
+  });
 }
 
 function renderMovies(list) {
   movieList.replaceChildren();
-  document.getElementById('movieCount').textContent = `${list.length} movies`;
+  document.getElementById('movieCount').textContent = `${list.length} movie${list.length === 1 ? '' : 's'} available`;
 
   if (!list.length) {
     setMessage(movieMessage, 'No movies match your search.', 'visible');
@@ -57,7 +123,7 @@ function renderSlides() {
   movies.slice(0, 3).forEach(movie => {
     const slide = document.createElement('article');
     slide.className = 'slide';
-    slide.style.backgroundImage = `linear-gradient(90deg, rgba(8,10,20,.94), rgba(8,10,20,.25)), url("${poster(movie.poster)}")`;
+    slide.style.backgroundImage = `linear-gradient(90deg, rgba(8,10,20,.94), rgba(8,10,20,.25)), url("${poster(movie.poster, movie.title, movie.genre)}")`;
 
     const content = document.createElement('div');
     content.className = 'slide-content';
@@ -67,12 +133,15 @@ function renderSlides() {
     const title = document.createElement('h2');
     title.textContent = movie.title;
     const details = document.createElement('p');
-    details.textContent = `${movie.genre} | ${movie.language} | Rating ${movie.rating}/10`;
+    details.textContent = `${movie.genre} | ${movie.language || 'Hindi'} | ${movie.duration} min`;
+    const meta = document.createElement('div');
+    meta.className = 'hero-meta';
+    meta.innerHTML = `<span>${Number(movie.rating || 0).toFixed(1)}/10</span><span>${movie.certificate || 'UA'}</span><span>From ${movie.language || 'Hindi'} cinema</span>`;
     const button = document.createElement('button');
     button.className = 'button';
     button.textContent = 'Book now';
     button.addEventListener('click', () => chooseMovie(movie));
-    content.append(label, title, details, button);
+    content.append(label, title, details, meta, button);
     slide.appendChild(content);
     slides.appendChild(slide);
   });
@@ -89,7 +158,9 @@ function showSlide(next) {
 async function loadMovies() {
   try {
     movies = await request('/movies');
-    renderMovies(movies);
+    renderCategoryFilters();
+    renderGenreFilters();
+    renderMovies(filteredMovies());
     renderSlides();
     if (!movies.length) {
       setMessage(movieMessage, 'No shows are listed yet. Run the demo seed command to load the catalogue.', 'visible');
@@ -116,10 +187,7 @@ function renderCities(query = '') {
 }
 
 document.getElementById('search').addEventListener('input', event => {
-  const query = event.target.value.trim().toLowerCase();
-  renderMovies(movies.filter(movie =>
-    movie.title.toLowerCase().includes(query) || movie.genre.toLowerCase().includes(query)
-  ));
+  renderMovies(filteredMovies());
 });
 document.getElementById('openCity').addEventListener('click', () => {
   renderCities();

@@ -8,7 +8,10 @@
     "dev": "nodemon server.js",
     "seed": "node scripts/seed.js",
     "sync:movies": "node scripts/syncTmdbMovies.js",
-    "check": "node --check server.js && node --check lib/firebase.js && node --check lib/validators.js && node --check lib/mailer.js && node --check routes/movieRoutes.js && node --check routes/showRoutes.js && node --check routes/bookingRoutes.js && node --check routes/userRoutes.js && node --check scripts/seed.js && node --check scripts/syncTmdbMovies.js"
+    "add:movie": "node scripts/addMovie.js",
+    "update:posters": "node scripts/updatePosters.js",
+    "check:mail": "node scripts/checkMail.js",
+    "check": "node --check server.js && node --check lib/firebase.js && node --check lib/validators.js && node --check lib/mailer.js && node --check routes/movieRoutes.js && node --check routes/showRoutes.js && node --check routes/bookingRoutes.js && node --check routes/userRoutes.js && node --check scripts/seed.js && node --check scripts/syncTmdbMovies.js && node --check scripts/checkMail.js && node --check scripts/addMovie.js && node --check scripts/updatePosters.js"
   },
   "keywords": [
     "movies",

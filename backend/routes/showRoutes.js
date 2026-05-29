@@ -3,6 +3,7 @@ const { db, documentData } = require('../lib/firebase');
 const { RequestError, numberInRange, optionalString, requiredString } = require('../lib/validators');
 
 const router = express.Router();
+const SEAT_COUNT = 120;
 
 function requireAdmin(req, res, next) {
   const key = process.env.ADMIN_API_KEY;
@@ -17,9 +18,9 @@ function showPayload(body = {}) {
   if (Number.isNaN(date.getTime())) {
     throw new RequestError('Enter a valid show date.');
   }
-  const seats = body.seats === undefined ? Array(40).fill(0) : body.seats;
-  if (!Array.isArray(seats) || seats.length !== 40 || seats.some(seat => seat !== 0 && seat !== 1)) {
-    throw new RequestError('A show must contain exactly 40 valid seats.');
+  const seats = body.seats === undefined ? Array(SEAT_COUNT).fill(0) : body.seats;
+  if (!Array.isArray(seats) || seats.length < 100 || seats.some(seat => seat !== 0 && seat !== 1)) {
+    throw new RequestError('A show must contain at least 100 valid seats.');
   }
   return {
     movieId: requiredString(body.movieId, 'Movie'),

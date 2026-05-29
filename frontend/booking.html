@@ -17,6 +17,13 @@
   <main class="seat-page">
     <p class="notice visible" id="seatMessage">Loading available seats...</p>
     <section class="seat-layout hidden" id="seatLayout">
+      <div class="auditorium-head">
+        <div>
+          <p class="eyebrow">Choose seats</p>
+          <h1>Pick your preferred view</h1>
+        </div>
+        <span>Max comfort rows B-D</span>
+      </div>
       <div class="screen">SCREEN THIS WAY</div>
       <div class="seat-grid" id="seats" aria-label="Available seats"></div>
       <div class="legend">
@@ -27,6 +34,7 @@
     </section>
     <aside class="summary-card hidden" id="summary">
       <h2>Booking summary</h2>
+      <div class="fare-line"><span>Ticket price</span><strong id="ticketPrice"></strong></div>
       <p class="muted">Seats</p>
       <p id="selectedSeats">None selected</p>
       <div class="summary-total"><span>Payable amount</span><strong id="total">INR 0</strong></div>

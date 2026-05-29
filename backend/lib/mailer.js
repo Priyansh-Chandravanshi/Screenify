@@ -1,4 +1,8 @@
+const fs = require('fs/promises');
+const path = require('path');
 const nodemailer = require('nodemailer');
+
+const previewDir = path.join(__dirname, '..', 'mail-previews');
 
 function emailConfigured() {
   return Boolean(
@@ -8,6 +12,13 @@ function emailConfigured() {
     process.env.MAIL_PASS &&
     process.env.MAIL_FROM
   );
+}
+
+function mailAuth() {
+  return {
+    user: process.env.MAIL_USER,
+    pass: String(process.env.MAIL_PASS || '').replace(/\s/g, '')
+  };
 }
 
 function escapeHtml(value) {
@@ -78,16 +89,60 @@ function createTransport() {
     host: process.env.MAIL_HOST,
     port: Number(process.env.MAIL_PORT),
     secure: String(process.env.MAIL_SECURE).toLowerCase() === 'true',
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS
-    }
+    auth: mailAuth(),
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000
   });
+}
+
+function safeFileName(value) {
+  return String(value || 'ticket')
+    .replace(/[^a-z0-9-]+/gi, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 80);
+}
+
+async function saveTicketPreview(booking, reason = '') {
+  await fs.mkdir(previewDir, { recursive: true });
+  const fileName = `${safeFileName(booking.reference)}.html`;
+  const filePath = path.join(previewDir, fileName);
+  await fs.writeFile(filePath, ticketHtml(booking), 'utf8');
+  return {
+    previewFile: fileName,
+    previewPath: filePath,
+    previewUrl: `/mail-previews/${fileName}`,
+    reason
+  };
+}
+
+async function verifyEmailSetup() {
+  if (!emailConfigured()) {
+    return {
+      ok: false,
+      status: 'not_configured',
+      message: 'Mail settings are missing in backend/.env.'
+    };
+  }
+
+  try {
+    await createTransport().verify();
+    return { ok: true, status: 'ready', message: 'SMTP connection verified.' };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 'failed',
+      message: error.message,
+      code: error.code || '',
+      command: error.command || ''
+    };
+  }
 }
 
 async function sendTicketEmail(booking) {
   if (!emailConfigured()) {
-    return { status: 'not_configured' };
+    const preview = await saveTicketPreview(booking, 'Mail settings are missing in backend/.env.');
+    return { status: 'preview_saved', ...preview };
   }
 
   try {
@@ -108,8 +163,15 @@ async function sendTicketEmail(booking) {
     return { status: 'sent', to: booking.customerEmail };
   } catch (error) {
     console.error('Ticket email failed:', error.message);
-    return { status: 'failed' };
+    const preview = await saveTicketPreview(booking, error.message);
+    return {
+      status: 'preview_saved',
+      reason: error.message,
+      code: error.code || '',
+      command: error.command || '',
+      ...preview
+    };
   }
 }
 
-module.exports = { emailConfigured, sendTicketEmail };
+module.exports = { emailConfigured, sendTicketEmail, verifyEmailSetup };

@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
 
 const { db } = require('../lib/firebase');
+const SEAT_COUNT = 120;
 
 const movies = [
   {
@@ -62,9 +63,10 @@ async function seed() {
     const followingDay = new Date();
     followingDay.setDate(followingDay.getDate() + 2);
     const listings = [
-      { suffix: 'pvr-morning', theatre: 'PVR Nexus Mall', auditorium: 'Audi 2', format: 'IMAX', date: tomorrow, time: '10:30 AM', price: 280 },
-      { suffix: 'pvr-evening', theatre: 'PVR Nexus Mall', auditorium: 'Audi 2', format: 'IMAX', date: tomorrow, time: '07:15 PM', price: 340 },
-      { suffix: 'inox-evening', theatre: 'INOX Central', auditorium: 'Screen 4', format: '2D', date: followingDay, time: '04:00 PM', price: 220 }
+      { suffix: 'pvr-morning', theatre: 'PVR INOX Nexus Mall', auditorium: 'Audi 2', format: 'IMAX', date: tomorrow, time: '10:30 AM', price: 280 },
+      { suffix: 'pvr-evening', theatre: 'PVR INOX Nexus Mall', auditorium: 'Audi 2', format: 'IMAX', date: tomorrow, time: '07:15 PM', price: 340 },
+      { suffix: 'inox-evening', theatre: 'INOX Central', auditorium: 'Screen 4', format: '2D', date: followingDay, time: '04:00 PM', price: 220 },
+      { suffix: 'cinepolis-late', theatre: 'Cinepolis Celebration Mall', auditorium: 'Audi 1', format: 'Dolby Atmos', date: followingDay, time: '09:45 PM', price: 310 }
     ];
 
     for (const listing of listings) {
@@ -79,7 +81,7 @@ async function seed() {
           date: listing.date.toISOString(),
           time: listing.time,
           price: listing.price,
-          seats: Array(40).fill(0),
+          seats: Array(SEAT_COUNT).fill(0),
           createdAt: now,
           updatedAt: now
         });

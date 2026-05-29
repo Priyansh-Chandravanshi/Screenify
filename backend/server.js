@@ -8,11 +8,12 @@ const movieRoutes = require('./routes/movieRoutes');
 const showRoutes = require('./routes/showRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const userRoutes = require('./routes/userRoutes');
-const { emailConfigured } = require('./lib/mailer');
+const { emailConfigured, verifyEmailSetup } = require('./lib/mailer');
 
 const app = express();
 const port = Number(process.env.PORT) || 5000;
 const frontendPath = path.join(__dirname, '..', 'frontend');
+const mailPreviewPath = path.join(__dirname, 'mail-previews');
 
 app.disable('x-powered-by');
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
@@ -27,12 +28,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/mail/status', async (req, res) => {
+  const status = await verifyEmailSetup();
+  res.status(status.ok ? 200 : 503).json(status);
+});
+
 app.use('/api', movieRoutes);
 app.use('/api', showRoutes);
 app.use('/api', bookingRoutes);
 app.use('/api', userRoutes);
 
 app.use(express.static(frontendPath));
+app.use('/mail-previews', express.static(mailPreviewPath));
 app.get('/', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });

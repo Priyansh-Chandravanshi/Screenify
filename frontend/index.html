@@ -31,6 +31,13 @@
       <button class="slide-control next" id="nextSlide" type="button" aria-label="Next movie">&gt;</button>
     </section>
 
+    <section class="trust-strip" aria-label="Booking highlights">
+      <div><strong>40K+</strong><span>demo seats protected</span></div>
+      <div><strong>Instant</strong><span>booking confirmation</span></div>
+      <div><strong>Email</strong><span>ticket delivery ready</span></div>
+      <div><strong>Live</strong><span>Firestore seat lock</span></div>
+    </section>
+
     <section class="content-section" id="movies">
       <div class="section-heading">
         <div>
@@ -39,6 +46,8 @@
         </div>
         <p class="muted" id="movieCount"></p>
       </div>
+      <div class="filter-row category-row" id="categoryFilters" aria-label="Filter catalogue by category"></div>
+      <div class="filter-row" id="genreFilters" aria-label="Filter movies by genre"></div>
       <p class="notice" id="movieMessage">Loading movies...</p>
       <div class="movie-grid" id="movieList"></div>
     </section>

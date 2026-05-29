@@ -4,8 +4,14 @@ const message = document.getElementById('seatMessage');
 const selected = new Set();
 let show;
 
+function seatColumns(count) {
+  if (count >= 100) return 10;
+  return 8;
+}
+
 function seatLabel(index) {
-  return `${String.fromCharCode(65 + Math.floor(index / 8))}${(index % 8) + 1}`;
+  const columns = seatColumns(show?.seats?.length || 0);
+  return `${String.fromCharCode(65 + Math.floor(index / columns))}${(index % columns) + 1}`;
 }
 
 function updateSummary() {
@@ -18,18 +24,20 @@ function updateSummary() {
 
 function renderSeats() {
   const grid = document.getElementById('seats');
+  const columns = seatColumns(show.seats.length);
+  grid.style.setProperty('--seat-columns', columns);
   grid.replaceChildren();
   show.seats.forEach((booked, index) => {
-    if (index % 8 === 0) {
+    if (index % columns === 0) {
       const row = document.createElement('span');
       row.className = 'row-label';
-      row.textContent = String.fromCharCode(65 + Math.floor(index / 8));
+      row.textContent = String.fromCharCode(65 + Math.floor(index / columns));
       grid.appendChild(row);
     }
     const seat = document.createElement('button');
     seat.type = 'button';
     seat.className = `seat ${booked ? 'booked' : ''}`;
-    seat.textContent = (index % 8) + 1;
+    seat.textContent = (index % columns) + 1;
     seat.disabled = Boolean(booked);
     seat.setAttribute('aria-label', `Seat ${seatLabel(index)}${booked ? ', sold' : ''}`);
     seat.addEventListener('click', () => {
@@ -56,6 +64,7 @@ async function loadShow() {
     document.getElementById('movieTitle').textContent = show.movieId.title;
     document.getElementById('showDetails').textContent =
       `${show.theatre} | ${date(show.date)} ${show.time} | ${show.format}`;
+    document.getElementById('ticketPrice').textContent = money(show.price);
     renderSeats();
     message.className = 'notice';
     document.getElementById('seatLayout').classList.remove('hidden');

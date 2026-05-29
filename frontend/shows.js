@@ -35,6 +35,11 @@ function renderDateFilter() {
 function renderShows() {
   showList.replaceChildren();
   const available = shows.filter(show => dayKey(show.date) === selectedDate);
+  if (!available.length) {
+    setMessage(showMessage, 'No showtimes available on this date.', 'visible');
+    return;
+  }
+  showMessage.className = 'notice';
   const theatres = available.reduce((groups, show) => {
     if (!groups[show.theatre]) groups[show.theatre] = [];
     groups[show.theatre].push(show);
@@ -48,7 +53,14 @@ function renderShows() {
     name.textContent = theatre;
     const location = document.createElement('p');
     location.className = 'muted';
-    location.textContent = 'M-Ticket available | Cancellation available';
+    location.textContent = 'M-Ticket available | Food & beverage pickup | Cancellation available';
+    const perks = document.createElement('div');
+    perks.className = 'theatre-perks';
+    ['Laser projection', 'Clean seats', 'Mobile entry'].forEach(perk => {
+      const item = document.createElement('span');
+      item.textContent = perk;
+      perks.appendChild(item);
+    });
     const buttons = document.createElement('div');
     buttons.className = 'show-times';
     listings.forEach(show => {
@@ -66,7 +78,7 @@ function renderShows() {
       });
       buttons.appendChild(button);
     });
-    card.append(name, location, buttons);
+    card.append(name, location, perks, buttons);
     showList.appendChild(card);
   });
 }
@@ -83,7 +95,7 @@ async function loadShows() {
     ]);
     document.getElementById('movieTitle').textContent = movie.title;
     document.getElementById('movieMeta').textContent = `${movie.genre} | ${movie.language} | ${movie.duration} min`;
-    document.getElementById('showPoster').src = poster(movie.poster);
+    document.getElementById('showPoster').src = poster(movie.poster, movie.title, movie.genre);
     document.getElementById('showPoster').alt = `${movie.title} poster`;
     shows = listings;
     showMessage.className = 'notice';
