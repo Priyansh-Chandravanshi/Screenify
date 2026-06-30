@@ -1,4 +1,4 @@
-const { request, save, poster, setMessage } = window.Screenify;
+const { request, save, poster, bindPosterFallback, setMessage } = window.Screenify;
 const movieId = new URLSearchParams(window.location.search).get('id');
 const message = document.getElementById('message');
 
@@ -29,6 +29,7 @@ async function loadMovie() {
     const image = document.getElementById('poster');
     image.src = poster(movie.poster, movie.title, movie.genre);
     image.alt = `${movie.title} poster`;
+    bindPosterFallback(image, movie.title, movie.genre);
     document.getElementById('movieBanner').style.backgroundImage =
       `linear-gradient(90deg, rgba(8,10,20,.98) 28%, rgba(8,10,20,.72), rgba(8,10,20,.88)), url("${poster(movie.poster, movie.title, movie.genre)}")`;
     document.getElementById('bookButton').addEventListener('click', () => {

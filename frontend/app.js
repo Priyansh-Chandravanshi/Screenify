@@ -89,6 +89,12 @@
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
+  function bindPosterFallback(image, title = 'Screenify', genre = 'Cinema') {
+    image.addEventListener('error', () => {
+      image.src = poster('', title, genre);
+    }, { once: true });
+  }
+
   function escapeSvg(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -103,5 +109,5 @@
     element.className = `notice ${kind}`.trim();
   }
 
-  window.Screenify = { request, save, load, money, date, poster, setMessage };
+  window.Screenify = { request, save, load, money, date, poster, bindPosterFallback, setMessage };
 }());

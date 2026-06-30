@@ -1,4 +1,4 @@
-const { request, save, poster, date, money, setMessage } = window.Screenify;
+const { request, save, poster, bindPosterFallback, date, money, setMessage } = window.Screenify;
 const movieId = new URLSearchParams(window.location.search).get('movieId');
 const showList = document.getElementById('showList');
 const showMessage = document.getElementById('showMessage');
@@ -95,8 +95,10 @@ async function loadShows() {
     ]);
     document.getElementById('movieTitle').textContent = movie.title;
     document.getElementById('movieMeta').textContent = `${movie.genre} | ${movie.language} | ${movie.duration} min`;
-    document.getElementById('showPoster').src = poster(movie.poster, movie.title, movie.genre);
-    document.getElementById('showPoster').alt = `${movie.title} poster`;
+    const showPoster = document.getElementById('showPoster');
+    showPoster.src = poster(movie.poster, movie.title, movie.genre);
+    showPoster.alt = `${movie.title} poster`;
+    bindPosterFallback(showPoster, movie.title, movie.genre);
     shows = listings;
     showMessage.className = 'notice';
     if (!shows.length) {

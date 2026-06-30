@@ -10,7 +10,7 @@
   <header class="navbar">
     <a class="logo" href="index.html"><span>S</span> Screenify</a>
     <label class="search-box" aria-label="Search movies">
-      <input id="search" type="search" placeholder="Search movies, genres...">
+      <input id="search" type="search" placeholder="Search for movies, genres, languages or cast">
     </label>
     <div class="nav-right">
       <button class="location" id="openCity" type="button"><span id="selectedCity">Select city</span></button>
@@ -19,9 +19,11 @@
   </header>
   <nav class="menu" aria-label="Explore">
     <a class="active" href="#movies">Movies</a>
+    <a href="#experiences">Stream</a>
+    <a href="#experiences">Events</a>
+    <a href="#experiences">Plays</a>
     <a href="#premieres">Premieres</a>
-    <a href="#experiences">Experiences</a>
-    <a href="#movies">Now Showing</a>
+    <a href="#movies">Offers</a>
   </nav>
 
   <main>
@@ -36,6 +38,12 @@
       <div><strong>Instant</strong><span>booking confirmation</span></div>
       <div><strong>Email</strong><span>ticket delivery ready</span></div>
       <div><strong>Live</strong><span>Firestore seat lock</span></div>
+    </section>
+
+    <section class="offer-strip" aria-label="Booking offer">
+      <strong>Get ready for showtime</strong>
+      <span>Fresh releases, quick seat selection and demo checkout in one smooth flow.</span>
+      <a href="#movies">Book now</a>
     </section>
 
     <section class="content-section" id="movies">

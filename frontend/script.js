@@ -1,4 +1,4 @@
-const { request, save, load, poster, setMessage } = window.Screenify;
+const { request, save, load, poster, bindPosterFallback, setMessage } = window.Screenify;
 const cities = ['Indore', 'Bhopal', 'Jaipur', 'Mumbai', 'Delhi', 'Pune', 'Hyderabad', 'Bengaluru', 'Chennai', 'Kolkata'];
 let movies = [];
 let slideIndex = 0;
@@ -24,6 +24,7 @@ function movieCard(movie) {
   image.src = poster(movie.poster, movie.title, movie.genre);
   image.alt = `${movie.title} poster`;
   image.loading = 'lazy';
+  bindPosterFallback(image, movie.title, movie.genre);
 
   const badge = document.createElement('span');
   badge.className = 'movie-badge';
@@ -49,12 +50,20 @@ function movieCard(movie) {
 function filteredMovies() {
   const query = document.getElementById('search').value.trim().toLowerCase();
   return movies.filter(movie => {
+    const searchable = [
+      movie.title,
+      movie.genre,
+      movie.category,
+      movie.language,
+      movie.certificate,
+      movie.synopsis,
+      movie.about,
+      ...(Array.isArray(movie.cast) ? movie.cast.map(person => person?.name || person) : [])
+    ].map(value => String(value || '').toLowerCase());
     const matchesQuery = !query ||
-      movie.title.toLowerCase().includes(query) ||
-      movie.genre.toLowerCase().includes(query) ||
-      movieCategory(movie).toLowerCase().includes(query) ||
-      String(movie.language || '').toLowerCase().includes(query);
-    const matchesGenre = activeGenre === 'All' || movie.genre === activeGenre;
+      searchable.some(value => value.includes(query)) ||
+      movieCategory(movie).toLowerCase().includes(query);
+    const matchesGenre = activeGenre === 'All' || String(movie.genre || '') === activeGenre;
     const matchesCategory = activeCategory === 'All' || movieCategory(movie) === activeCategory;
     return matchesQuery && matchesGenre && matchesCategory;
   });
@@ -78,6 +87,7 @@ function renderCategoryFilters() {
     button.textContent = category;
     button.addEventListener('click', () => {
       activeCategory = category;
+      activeGenre = 'All';
       renderCategoryFilters();
       renderGenreFilters();
       renderMovies(filteredMovies());
@@ -107,10 +117,13 @@ function renderGenreFilters() {
 
 function renderMovies(list) {
   movieList.replaceChildren();
-  document.getElementById('movieCount').textContent = `${list.length} movie${list.length === 1 ? '' : 's'} available`;
+  const query = document.getElementById('search').value.trim();
+  document.getElementById('movieCount').textContent = query
+    ? `${list.length} result${list.length === 1 ? '' : 's'} for "${query}"`
+    : `${list.length} movie${list.length === 1 ? '' : 's'} available`;
 
   if (!list.length) {
-    setMessage(movieMessage, 'No movies match your search.', 'visible');
+    setMessage(movieMessage, query ? 'No movies match your search. Try title, language, genre or actor name.' : 'No movies match this filter.', 'visible');
     return;
   }
 

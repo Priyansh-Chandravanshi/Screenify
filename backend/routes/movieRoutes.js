@@ -61,7 +61,16 @@ router.get('/movies', async (req, res, next) => {
     const snapshot = await db.collection('movies').get();
     const movies = snapshot.docs
       .map(documentData)
-      .filter(movie => !query || movie.title.toLowerCase().includes(query))
+      .filter(movie => !query || [
+        movie.title,
+        movie.genre,
+        movie.category,
+        movie.language,
+        movie.certificate,
+        movie.synopsis,
+        movie.about,
+        ...(Array.isArray(movie.cast) ? movie.cast.map(person => person?.name || person) : [])
+      ].some(value => String(value || '').toLowerCase().includes(query)))
       .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
     return res.json(movies);
   } catch (error) {
