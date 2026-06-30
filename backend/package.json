@@ -10,8 +10,9 @@
     "sync:movies": "node scripts/syncTmdbMovies.js",
     "add:movie": "node scripts/addMovie.js",
     "update:posters": "node scripts/updatePosters.js",
+    "update:tmdb-media": "node scripts/updateTmdbMedia.js",
     "check:mail": "node scripts/checkMail.js",
-    "check": "node --check server.js && node --check lib/firebase.js && node --check lib/validators.js && node --check lib/mailer.js && node --check routes/movieRoutes.js && node --check routes/showRoutes.js && node --check routes/bookingRoutes.js && node --check routes/userRoutes.js && node --check scripts/seed.js && node --check scripts/syncTmdbMovies.js && node --check scripts/checkMail.js && node --check scripts/addMovie.js && node --check scripts/updatePosters.js"
+    "check": "node --check server.js && node --check lib/firebase.js && node --check lib/validators.js && node --check lib/mailer.js && node --check lib/ticketAssets.js && node --check routes/movieRoutes.js && node --check routes/showRoutes.js && node --check routes/bookingRoutes.js && node --check routes/userRoutes.js && node --check routes/adminRoutes.js && node --check scripts/seed.js && node --check scripts/syncTmdbMovies.js && node --check scripts/updateTmdbMedia.js && node --check scripts/checkMail.js && node --check scripts/addMovie.js && node --check scripts/updatePosters.js"
   },
   "keywords": [
     "movies",
@@ -29,6 +30,8 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.10.0",
     "nodemailer": "^8.0.9",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
   }
 }

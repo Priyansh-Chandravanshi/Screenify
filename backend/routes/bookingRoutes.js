@@ -3,9 +3,15 @@ const express = require('express');
 const { db, documentData } = require('../lib/firebase');
 const { RequestError } = require('../lib/validators');
 const { sendTicketEmail } = require('../lib/mailer');
+const { createTicketPdf, qrDataUrl } = require('../lib/ticketAssets');
 
 const router = express.Router();
 const DEFAULT_SEAT_COLUMNS = 10;
+const COUPONS = {
+  WELCOME100: { type: 'flat', value: 100 },
+  STUDENT20: { type: 'percent', value: 20 },
+  SCREENIFY50: { type: 'flat', value: 50 }
+};
 
 function seatColumns(seatCount = 0) {
   return seatCount >= 100 ? DEFAULT_SEAT_COLUMNS : 8;
@@ -19,6 +25,15 @@ function bookingReference() {
   return `SCN-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
 
+function couponDiscount(code, subtotal) {
+  const coupon = COUPONS[String(code || '').trim().toUpperCase()];
+  if (!coupon) return { code: '', discount: 0 };
+  const discount = coupon.type === 'percent'
+    ? Math.round(subtotal * (coupon.value / 100))
+    : coupon.value;
+  return { code: String(code).trim().toUpperCase(), discount: Math.min(discount, Math.max(0, subtotal - 1)) };
+}
+
 router.post('/book', async (req, res, next) => {
   try {
     const body = req.body || {};
@@ -26,6 +41,7 @@ router.post('/book', async (req, res, next) => {
     const seats = Array.isArray(body.seats) ? [...new Set(body.seats.map(Number))] : [];
     const paymentMethod = String(body.paymentMethod || '');
     const customerEmail = String(body.customerEmail || '').trim().toLowerCase();
+    const couponCode = String(body.couponCode || '').trim().toUpperCase();
 
     if (!showId) {
       throw new RequestError('Choose a valid show.');
@@ -65,13 +81,18 @@ router.post('/book', async (req, res, next) => {
         updatedSeats[seat] = 1;
       });
       const columns = seatColumns(show.seats.length);
+      const subtotal = seats.length * show.price;
+      const coupon = couponDiscount(couponCode, subtotal);
       const bookingData = {
         reference: bookingReference(),
         movieId: show.movieId,
         showId,
         seats,
         seatLabels: seats.map(seat => labelForSeat(seat, columns)),
-        amount: seats.length * show.price,
+        subtotal,
+        discount: coupon.discount,
+        couponCode: coupon.code,
+        amount: subtotal - coupon.discount,
         customerEmail,
         paymentMethod,
         status: 'confirmed',
@@ -99,7 +120,7 @@ router.post('/book', async (req, res, next) => {
     await bookingDocument.update({ emailDelivery });
     return res.status(201).json({
       message: 'Booking confirmed.',
-      booking: { ...booking, emailDelivery },
+      booking: { ...booking, emailDelivery, qrDataUrl: await qrDataUrl(booking) },
       email
     });
   } catch (error) {
@@ -107,28 +128,45 @@ router.post('/book', async (req, res, next) => {
   }
 });
 
+async function bookingByReference(reference) {
+  const snapshot = await db.collection('bookings')
+    .where('reference', '==', reference)
+    .limit(1)
+    .get();
+  if (snapshot.empty) {
+    throw new RequestError('Booking not found.', 404);
+  }
+  const booking = documentData(snapshot.docs[0]);
+  const [movieSnapshot, showSnapshot] = await Promise.all([
+    db.collection('movies').doc(booking.movieId).get(),
+    db.collection('shows').doc(booking.showId).get()
+  ]);
+  if (!movieSnapshot.exists || !showSnapshot.exists) {
+    throw new RequestError('Booking details are unavailable.', 404);
+  }
+  return {
+    ...booking,
+    movieId: documentData(movieSnapshot),
+    showId: documentData(showSnapshot)
+  };
+}
+
 router.get('/bookings/:reference', async (req, res, next) => {
   try {
-    const snapshot = await db.collection('bookings')
-      .where('reference', '==', req.params.reference)
-      .limit(1)
-      .get();
-    if (snapshot.empty) {
-      return res.status(404).json({ message: 'Booking not found.' });
-    }
-    const booking = documentData(snapshot.docs[0]);
-    const [movieSnapshot, showSnapshot] = await Promise.all([
-      db.collection('movies').doc(booking.movieId).get(),
-      db.collection('shows').doc(booking.showId).get()
-    ]);
-    if (!movieSnapshot.exists || !showSnapshot.exists) {
-      return res.status(404).json({ message: 'Booking details are unavailable.' });
-    }
-    return res.json({
-      ...booking,
-      movieId: documentData(movieSnapshot),
-      showId: documentData(showSnapshot)
-    });
+    const booking = await bookingByReference(req.params.reference);
+    return res.json({ ...booking, qrDataUrl: await qrDataUrl(booking) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/bookings/:reference/ticket.pdf', async (req, res, next) => {
+  try {
+    const booking = await bookingByReference(req.params.reference);
+    const pdf = await createTicketPdf(booking);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${booking.reference}.pdf"`);
+    return res.send(pdf);
   } catch (error) {
     return next(error);
   }

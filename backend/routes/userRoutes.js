@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const express = require('express');
+const { FieldValue } = require('firebase-admin/firestore');
 const { db, documentData } = require('../lib/firebase');
 const { RequestError, optionalString, requiredString } = require('../lib/validators');
 
@@ -17,7 +18,7 @@ function userDocumentId(email) {
 }
 
 function publicUser(user) {
-  return { id: user._id, name: user.name, email: user.email };
+  return { id: user._id, name: user.name, email: user.email, wishlist: user.wishlist || [] };
 }
 
 router.post('/register', async (req, res, next) => {
@@ -43,6 +44,7 @@ router.post('/register', async (req, res, next) => {
       const user = {
         name,
         email,
+        wishlist: [],
         passwordSalt: salt,
         passwordHash: hash,
         createdAt: new Date().toISOString(),
@@ -78,6 +80,87 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
     return res.json({ message: 'Welcome back.', user: publicUser(user) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/users/:email/bookings', async (req, res, next) => {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase();
+    const snapshot = await db.collection('bookings')
+      .where('customerEmail', '==', email)
+      .get();
+    const bookings = await Promise.all(snapshot.docs.map(async doc => {
+      const booking = documentData(doc);
+      const [movieSnapshot, showSnapshot] = await Promise.all([
+        db.collection('movies').doc(booking.movieId).get(),
+        db.collection('shows').doc(booking.showId).get()
+      ]);
+      return {
+        ...booking,
+        movieId: movieSnapshot.exists ? documentData(movieSnapshot) : booking.movieId,
+        showId: showSnapshot.exists ? documentData(showSnapshot) : booking.showId
+      };
+    }));
+    bookings.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
+    return res.json(bookings);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/users/:email/wishlist', async (req, res, next) => {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase();
+    const snapshot = await db.collection('users').doc(userDocumentId(email)).get();
+    if (!snapshot.exists) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    const user = documentData(snapshot);
+    const movieIds = Array.isArray(user.wishlist) ? user.wishlist : [];
+    const movies = await Promise.all(movieIds.map(async movieId => {
+      const movie = await db.collection('movies').doc(movieId).get();
+      return movie.exists ? documentData(movie) : null;
+    }));
+    return res.json(movies.filter(Boolean));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/users/:email/wishlist', async (req, res, next) => {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase();
+    const movieId = requiredString(req.body?.movieId, 'Movie');
+    const reference = db.collection('users').doc(userDocumentId(email));
+    const [userSnapshot, movieSnapshot] = await Promise.all([
+      reference.get(),
+      db.collection('movies').doc(movieId).get()
+    ]);
+    if (!userSnapshot.exists) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (!movieSnapshot.exists) {
+      return res.status(404).json({ message: 'Movie not found.' });
+    }
+    await reference.update({ wishlist: FieldValue.arrayUnion(movieId), updatedAt: new Date().toISOString() });
+    return res.json({ message: 'Added to wishlist.', movie: documentData(movieSnapshot) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete('/users/:email/wishlist/:movieId', async (req, res, next) => {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase();
+    const reference = db.collection('users').doc(userDocumentId(email));
+    const snapshot = await reference.get();
+    if (!snapshot.exists) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    await reference.update({ wishlist: FieldValue.arrayRemove(req.params.movieId), updatedAt: new Date().toISOString() });
+    return res.json({ message: 'Removed from wishlist.' });
   } catch (error) {
     return next(error);
   }

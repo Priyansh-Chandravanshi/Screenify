@@ -5,6 +5,7 @@ const { db } = require('../lib/firebase');
 
 const TMDB_API = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280';
 const SEAT_COUNT = 120;
 const DEMO_MOVIE_IDS = [
   'midnight-runway',
@@ -399,7 +400,8 @@ const FALLBACK_REAL_MOVIES = [
     certificate: 'UA 13+',
     synopsis: 'The Sully family explores the ocean clans of Pandora in a visual epic.',
     releaseDate: '2022-12-16',
-    catalogueTag: 'Hollywood hit'
+    catalogueTag: 'Hollywood hit',
+    poster: 'https://image.tmdb.org/t/p/w780/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg'
   },
   {
     id: 'hollywood-top-gun-maverick',
@@ -909,6 +911,7 @@ async function syncMovies() {
     const movie = {
       title: detail.title,
       poster: `${TMDB_IMAGE}${detail.poster_path}`,
+      backdrop: detail.backdrop_path ? `${TMDB_BACKDROP}${detail.backdrop_path}` : '',
       duration: detail.runtime || 120,
       rating: Math.round(Number(detail.vote_average || 0) * 10) / 10,
       category: 'Hollywood',

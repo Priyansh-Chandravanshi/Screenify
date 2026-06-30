@@ -4,6 +4,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 
 const { db } = require('../lib/firebase');
 const SEAT_COUNT = 120;
+const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
 
 const SHOW_TEMPLATES = [
   { suffix: 'pvr-morning', theatre: 'PVR INOX Nexus Mall', auditorium: 'Audi 2', format: '2D', daysAhead: 0, time: '10:30 AM', price: 220 },
@@ -61,7 +62,8 @@ async function main() {
   const now = new Date().toISOString();
   await db.collection('movies').doc(id).set({
     title: movie.title,
-    poster: movie.poster || '',
+    poster: resolvePoster(movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath || movie.tmdbPosterPath),
+    backdrop: resolveBackdrop(movie.backdrop || movie.backdropUrl || movie.backdrop_path || movie.backdropPath || movie.tmdbBackdropPath),
     duration: Number(movie.duration) || 120,
     rating: Number(movie.rating) || 8,
     category: movie.category || 'Bollywood',
@@ -97,6 +99,30 @@ function normalizePeople(people) {
     }
     return { name: String(person), role: '', photo: '' };
   });
+}
+
+function resolvePoster(value) {
+  const poster = String(value || '').trim();
+  if (!poster) return '';
+  if (/^https?:\/\//i.test(poster) || poster.startsWith('data:') || poster.startsWith('public/')) {
+    return poster;
+  }
+  if (poster.startsWith('/')) {
+    return `${TMDB_IMAGE}${poster}`;
+  }
+  return poster;
+}
+
+function resolveBackdrop(value) {
+  const backdrop = String(value || '').trim();
+  if (!backdrop) return '';
+  if (/^https?:\/\//i.test(backdrop) || backdrop.startsWith('data:') || backdrop.startsWith('public/')) {
+    return backdrop;
+  }
+  if (backdrop.startsWith('/')) {
+    return 'https://image.tmdb.org/t/p/w1280' + backdrop;
+  }
+  return backdrop;
 }
 
 function normalizeReviews(reviews) {

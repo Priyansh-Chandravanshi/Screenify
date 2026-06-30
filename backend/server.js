@@ -8,6 +8,7 @@ const movieRoutes = require('./routes/movieRoutes');
 const showRoutes = require('./routes/showRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { emailConfigured, verifyEmailSetup } = require('./lib/mailer');
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api', movieRoutes);
 app.use('/api', showRoutes);
 app.use('/api', bookingRoutes);
 app.use('/api', userRoutes);
+app.use('/api', adminRoutes);
 
 app.use(express.static(frontendPath));
 app.use('/mail-previews', express.static(mailPreviewPath));
