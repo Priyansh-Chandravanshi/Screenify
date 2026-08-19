@@ -1,12 +1,16 @@
 {
   "title": "Example Movie",
   "poster": "https://example.com/poster.jpg",
+  "backdrop": "https://example.com/backdrop.jpg",
   "duration": 130,
+  "runtime": 130,
   "rating": 8.4,
   "category": "Bollywood",
   "genre": "Action / Drama",
+  "genres": ["Action", "Drama"],
   "language": "Hindi",
   "certificate": "UA",
+  "director": "Director Name",
   "synopsis": "Short movie description for the detail page.",
   "about": "Longer about text for the movie detail page.",
   "cast": [
@@ -31,7 +35,15 @@
     }
   ],
   "platform": "Theatre",
-  "trailerUrl": "https://www.youtube.com/results?search_query=Example+Movie+official+trailer",
+  "trailer": {
+    "name": "Official Trailer",
+    "site": "YouTube",
+    "type": "Trailer",
+    "key": "youtube-video-id",
+    "url": "https://www.youtube.com/watch?v=youtube-video-id",
+    "embedUrl": "https://www.youtube.com/embed/youtube-video-id"
+  },
+  "trailerUrl": "https://www.youtube.com/watch?v=youtube-video-id",
   "releaseDate": "2026-06-01",
   "catalogueTag": "New release"
 }

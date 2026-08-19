@@ -94,8 +94,10 @@ function filteredMovies() {
       movie.category,
       movie.language,
       movie.certificate,
+      movie.director,
       movie.synopsis,
       movie.about,
+      ...(Array.isArray(movie.genres) ? movie.genres : []),
       ...(Array.isArray(movie.cast) ? movie.cast.map(person => person?.name || person) : [])
     ].map(value => String(value || '').toLowerCase());
     const matchesQuery = !query ||

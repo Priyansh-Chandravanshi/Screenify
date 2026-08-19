@@ -814,7 +814,10 @@ function normalizePeople(people = []) {
         photo: profileUrl(person.photo || person.profile || person.profile_path || person.profilePath)
       };
     }
-    return { name: String(person), role: '', photo: '' };
+    const [role, name] = String(person || 'Unknown').includes(':')
+      ? String(person).split(':').map(value => value.trim())
+      : ['', String(person || 'Unknown').trim()];
+    return { name: name || role || 'Unknown', role: name ? role : '', photo: '' };
   });
 }
 
@@ -889,6 +892,59 @@ function normalizeCredits(credits = {}, detail = {}) {
   return { cast, crew };
 }
 
+function directorFromCrew(crew = []) {
+  const director = crew.find(person => /\bDirector\b/i.test(person?.role || ''))
+    || crew.find(person => /\bCreator\b/i.test(person?.role || ''));
+  return director?.name || '';
+}
+
+function emptyTrailer() {
+  return { name: '', site: '', type: '', key: '', url: '', embedUrl: '' };
+}
+
+function normalizeTrailer(videos = []) {
+  const trailer = (videos || [])
+    .filter(video => video?.key && video.site === 'YouTube' && ['Trailer', 'Teaser'].includes(video.type))
+    .sort((left, right) => {
+      const official = Number(Boolean(right.official)) - Number(Boolean(left.official));
+      if (official) return official;
+      const type = Number(right.type === 'Trailer') - Number(left.type === 'Trailer');
+      if (type) return type;
+      const name = Number(/official trailer/i.test(right.name || '')) - Number(/official trailer/i.test(left.name || ''));
+      if (name) return name;
+      return String(right.published_at || '').localeCompare(String(left.published_at || ''));
+    })[0];
+
+  if (!trailer) return emptyTrailer();
+  return {
+    name: String(trailer.name || 'Official trailer'),
+    site: 'YouTube',
+    type: String(trailer.type || 'Trailer'),
+    key: String(trailer.key),
+    url: `https://www.youtube.com/watch?v=${trailer.key}`,
+    embedUrl: `https://www.youtube.com/embed/${trailer.key}`
+  };
+}
+
+function youtubeKey(url) {
+  const value = String(url || '');
+  const match = value.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
+  return match ? match[1] : '';
+}
+
+function trailerFromUrl(url = '') {
+  const value = String(url || '').trim();
+  const key = youtubeKey(value);
+  return {
+    name: value ? 'Official trailer' : '',
+    site: key ? 'YouTube' : '',
+    type: value ? 'Trailer' : '',
+    key,
+    url: value,
+    embedUrl: key ? `https://www.youtube.com/embed/${key}` : ''
+  };
+}
+
 async function fetchMovieCredits(detail) {
   try {
     const credits = await tmdb(`/movie/${detail.id}/credits?language=en-IN`);
@@ -896,6 +952,20 @@ async function fetchMovieCredits(detail) {
   } catch (error) {
     console.warn(`Credits skipped for ${detail.title}: ${error.message}`);
     return { cast: [], crew: [] };
+  }
+}
+
+async function fetchMovieTrailer(id, title) {
+  try {
+    const videos = await tmdb(`/movie/${id}/videos?language=en-US`);
+    const trailer = normalizeTrailer(videos.results);
+    if (trailer.url) return trailer;
+
+    const regionalVideos = await tmdb(`/movie/${id}/videos?language=en-IN`);
+    return normalizeTrailer(regionalVideos.results);
+  } catch (error) {
+    console.warn(`Trailer skipped for ${title}: ${error.message}`);
+    return emptyTrailer();
   }
 }
 
@@ -1001,30 +1071,43 @@ async function syncMovies() {
 
   for (const item of candidates) {
     const detail = await tmdb(`/movie/${item.id}?language=en-IN`);
-    const credits = await fetchMovieCredits(detail);
+    const [credits, trailer] = await Promise.all([
+      fetchMovieCredits(detail),
+      fetchMovieTrailer(detail.id, detail.title)
+    ]);
     const movieId = `tmdb-${item.id}`;
+    const runtime = detail.runtime || 120;
+    const genres = (detail.genres || []).map(genre => genre.name).filter(Boolean);
+    const rating = Math.round(Number(detail.vote_average || 0) * 10) / 10;
     const movie = {
       title: detail.title,
       poster: `${TMDB_IMAGE}${detail.poster_path}`,
       backdrop: detail.backdrop_path ? `${TMDB_BACKDROP}${detail.backdrop_path}` : '',
-      duration: detail.runtime || 120,
-      rating: Math.round(Number(detail.vote_average || 0) * 10) / 10,
+      duration: runtime,
+      runtime,
+      rating,
+      tmdbRating: rating,
+      tmdbVoteCount: Number(detail.vote_count || 0),
       category: 'Hollywood',
-      genre: detail.genres.map(genre => genre.name).slice(0, 2).join(' / ') || 'Movie',
+      genre: genres.slice(0, 3).join(' / ') || 'Movie',
+      genres,
       language: languageName(detail.original_language),
       certificate: 'UA',
+      director: directorFromCrew(credits.crew),
       synopsis: detail.overview || 'Now playing in cinemas.',
       about: detail.overview || 'Now playing in cinemas.',
       cast: credits.cast,
       crew: credits.crew,
       reviews: defaultReviews({
-        rating: Math.round(Number(detail.vote_average || 0) * 10) / 10,
+        rating,
         category: 'Hollywood'
       }),
       platform: 'Theatre',
-      trailerUrl: '',
+      trailer,
+      trailerUrl: trailer.url,
       releaseDate: detail.release_date || '',
       tmdbId: detail.id,
+      tmdbMediaType: 'movie',
       source: 'tmdb',
       catalogueTag: item.release_date ? 'New release' : 'Trending',
       popularity: Number(item.popularity || 0),
@@ -1047,22 +1130,34 @@ async function seedFallbackRealMovies() {
   const now = new Date().toISOString();
 
   for (const item of FALLBACK_REAL_MOVIES) {
+    const runtime = Number(item.runtime || item.duration) || 120;
+    const genres = Array.isArray(item.genres)
+      ? item.genres.filter(Boolean)
+      : String(item.genre || '').split('/').map(value => value.trim()).filter(Boolean);
+    const crew = normalizePeople(item.crew || []);
+    const trailer = item.trailer && typeof item.trailer === 'object'
+      ? item.trailer
+      : trailerFromUrl(item.trailerUrl);
     const movie = {
       title: item.title,
       poster: item.poster || '',
-      duration: item.duration,
+      duration: runtime,
+      runtime,
       rating: item.rating,
       category: item.category || 'Bollywood',
       genre: item.genre,
+      genres,
       language: item.language,
       certificate: item.certificate,
+      director: item.director || directorFromCrew(crew),
       synopsis: item.synopsis,
       about: item.about || item.synopsis,
       cast: normalizePeople(item.cast || []),
-      crew: normalizePeople(item.crew || []),
+      crew,
       reviews: item.reviews || defaultReviews(item),
       platform: item.platform || (item.category === 'Web Series' ? 'OTT' : 'Theatre'),
-      trailerUrl: item.trailerUrl || '',
+      trailer,
+      trailerUrl: item.trailerUrl || trailer.url || '',
       releaseDate: item.releaseDate,
       catalogueTag: item.catalogueTag,
       source: 'curated-real-release-list',

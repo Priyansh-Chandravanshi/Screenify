@@ -90,6 +90,12 @@
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
+  function backdrop(url, title = 'Screenify', genre = 'Cinema') {
+    const imageUrl = tmdbImageUrl(url, 'w1280');
+    if (imageUrl) return imageUrl;
+    return poster('', title, genre);
+  }
+
   function moviePoster(movie = {}) {
     return poster(
       movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath || movie.tmdbPosterPath || movie.backdrop_path || movie.backdropPath,
@@ -99,7 +105,7 @@
   }
 
   function movieBackdrop(movie = {}) {
-    return poster(
+    return backdrop(
       movie.backdrop || movie.backdropUrl || movie.backdrop_path || movie.backdropPath || movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath,
       movie.title,
       movie.genre
@@ -107,21 +113,21 @@
   }
 
   function personPhoto(value) {
-    const imageUrl = tmdbImageUrl(value);
+    const imageUrl = tmdbImageUrl(value, 'w185');
     if (!imageUrl) return '';
     return imageUrl.startsWith('https://image.tmdb.org/t/p/w780/')
       ? imageUrl.replace('/w780/', '/w185/')
       : imageUrl;
   }
 
-  function tmdbImageUrl(value) {
+  function tmdbImageUrl(value, size = 'w780') {
     const raw = String(value || '').trim();
     if (!raw) return '';
     if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('public/')) {
       return raw;
     }
     if (raw.startsWith('/')) {
-      return `https://image.tmdb.org/t/p/w780${raw}`;
+      return `https://image.tmdb.org/t/p/${size}${raw}`;
     }
     return raw;
   }
@@ -179,6 +185,7 @@
     money,
     date,
     poster,
+    backdrop,
     moviePoster,
     movieBackdrop,
     personPhoto,

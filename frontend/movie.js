@@ -13,27 +13,37 @@ async function loadMovie() {
     const movie = await request(`/movies/${movieId}`);
     currentMovie = movie;
     save('selectedMovie', movie);
+    const runtime = formatRuntime(movie.runtime || movie.duration);
+    const genre = genreText(movie);
+    const director = movieDirector(movie);
+    const trailer = movieTrailer(movie);
+
     document.title = `${movie.title} | Screenify`;
+    document.getElementById('catalogueTag').textContent = movie.catalogueTag || (movie.source === 'tmdb' ? 'TMDB pick' : 'Now showing');
     document.getElementById('title').textContent = movie.title;
-    document.getElementById('details').textContent =
-      `${movie.certificate} | ${movie.genre} | ${movie.language} | ${movie.duration} min | Rating ${movie.rating}/10`;
+    document.getElementById('details').textContent = [
+      movie.certificate || 'UA',
+      genre,
+      movie.language || 'Multiple',
+      runtime,
+      director ? `Directed by ${director}` : ''
+    ].filter(Boolean).join(' | ');
     document.getElementById('ratingScore').textContent = `${Number(movie.rating || 0).toFixed(1)}/10`;
+    document.getElementById('runtimeValue').textContent = runtime;
+    document.getElementById('languageValue').textContent = movie.language || 'Multiple';
     document.getElementById('synopsis').textContent = movie.synopsis || 'Book the best seats for this screening.';
     document.getElementById('aboutMovie').textContent = movie.about || movie.synopsis || 'Book the best seats for this screening.';
+    renderMovieChips(movie, genre, runtime);
+    renderMovieFacts(movie, genre, runtime, director);
     renderPeople('castList', movie.cast);
     renderPeople('crewList', movie.crew);
     await loadReviews(movie);
-    const trailerButton = document.getElementById('trailerButton');
-    if (movie.trailerUrl) {
-      trailerButton.href = movie.trailerUrl;
-      trailerButton.classList.remove('hidden');
-    }
+    configureTrailer(trailer, movie.title);
     const image = document.getElementById('poster');
     image.src = moviePoster(movie);
     image.alt = `${movie.title} poster`;
     bindPosterFallback(image, movie.title, movie.genre);
-    document.getElementById('movieBanner').style.backgroundImage =
-      `linear-gradient(90deg, rgba(8,10,20,.98) 28%, rgba(8,10,20,.72), rgba(8,10,20,.88)), url("${movieBackdrop(movie)}")`;
+    document.getElementById('movieBanner').style.backgroundImage = `url("${movieBackdrop(movie)}")`;
     document.getElementById('bookButton').addEventListener('click', () => {
       window.location.href = `shows.html?movieId=${movie._id}`;
     });
@@ -46,11 +56,154 @@ async function loadMovie() {
   }
 }
 
+function genreText(movie = {}) {
+  if (Array.isArray(movie.genres) && movie.genres.length) {
+    return movie.genres.filter(Boolean).slice(0, 4).join(' / ');
+  }
+  return movie.genre || 'Movie';
+}
+
+function formatRuntime(value) {
+  const minutes = Number(value || 0);
+  if (!minutes) return 'TBA';
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  if (!hours) return `${minutes} min`;
+  return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
+}
+
+function releaseLabel(value) {
+  if (!value) return 'TBA';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }).format(date);
+}
+
+function movieDirector(movie = {}) {
+  if (movie.director) return movie.director;
+  const crew = Array.isArray(movie.crew) ? movie.crew.map(normalizePerson) : [];
+  const director = crew.find(person => /\bDirector\b/i.test(person.role))
+    || crew.find(person => /\bCreator\b/i.test(person.role));
+  return director?.name || '';
+}
+
+function renderMovieChips(movie, genre, runtime) {
+  const container = document.getElementById('movieChips');
+  container.replaceChildren();
+  [
+    movie.certificate || 'UA',
+    movie.category || 'Movie',
+    genre,
+    movie.language || 'Multiple',
+    runtime
+  ].filter(Boolean).forEach(value => {
+    const chip = document.createElement('span');
+    chip.textContent = value;
+    container.appendChild(chip);
+  });
+}
+
+function renderMovieFacts(movie, genre, runtime, director) {
+  const container = document.getElementById('movieFacts');
+  container.replaceChildren();
+  const facts = [
+    { label: 'Director', value: director || 'Details soon' },
+    { label: 'Genre', value: genre },
+    { label: 'Language', value: movie.language || 'Multiple' },
+    { label: 'Runtime', value: runtime },
+    { label: 'TMDB score', value: `${Number(movie.tmdbRating || movie.rating || 0).toFixed(1)}/10` },
+    { label: 'Release', value: releaseLabel(movie.releaseDate) }
+  ];
+  facts.forEach(item => {
+    const fact = document.createElement('div');
+    const label = document.createElement('span');
+    const value = document.createElement('strong');
+    label.textContent = item.label;
+    value.textContent = item.value;
+    fact.append(label, value);
+    container.appendChild(fact);
+  });
+}
+
+function movieTrailer(movie = {}) {
+  const trailer = movie.trailer && typeof movie.trailer === 'object' ? movie.trailer : {};
+  const sourceUrl = trailer.url || trailer.trailerUrl || movie.trailerUrl || '';
+  const key = trailer.key || youtubeKey(sourceUrl);
+  const site = trailer.site || (key ? 'YouTube' : '');
+  const url = sourceUrl || (key ? `https://www.youtube.com/watch?v=${key}` : '');
+  const embedUrl = trailer.embedUrl || (key ? `https://www.youtube.com/embed/${key}` : '');
+  return {
+    name: trailer.name || 'Official trailer',
+    site,
+    key,
+    url,
+    embedUrl
+  };
+}
+
+function youtubeKey(url) {
+  const value = String(url || '');
+  const match = value.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{6,})/);
+  return match ? match[1] : '';
+}
+
+function configureTrailer(trailer, title) {
+  const trailerButton = document.getElementById('trailerButton');
+  const posterTrailerButton = document.getElementById('posterTrailerButton');
+  const trailerTitle = document.getElementById('trailerTitle');
+  const external = document.getElementById('trailerExternal');
+  const hasTrailer = Boolean(trailer.url || trailer.embedUrl);
+
+  trailerButton.classList.toggle('hidden', !hasTrailer);
+  posterTrailerButton.classList.toggle('hidden', !hasTrailer);
+  if (!hasTrailer) return;
+
+  trailerTitle.textContent = `${title} trailer`;
+  trailerButton.href = trailer.url || '#';
+  external.href = trailer.url || '#';
+  external.classList.toggle('hidden', !trailer.url);
+  trailerButton.addEventListener('click', openTrailer);
+  posterTrailerButton.addEventListener('click', openTrailer);
+}
+
+function trailerEmbedUrl(value) {
+  if (!value) return '';
+  const separator = value.includes('?') ? '&' : '?';
+  return `${value}${separator}autoplay=1&rel=0`;
+}
+
+function openTrailer(event) {
+  const trailer = movieTrailer(currentMovie);
+  if (!trailer.embedUrl && trailer.url) {
+    if (event?.currentTarget?.tagName === 'BUTTON') {
+      window.open(trailer.url, '_blank', 'noopener');
+    }
+    return;
+  }
+
+  event?.preventDefault();
+  const modal = document.getElementById('trailerModal');
+  document.getElementById('trailerFrame').src = trailerEmbedUrl(trailer.embedUrl);
+  if (typeof modal.showModal === 'function') {
+    modal.showModal();
+  }
+}
+
+function closeTrailer() {
+  const modal = document.getElementById('trailerModal');
+  document.getElementById('trailerFrame').src = '';
+  if (modal.open) modal.close();
+}
+
 function renderPeople(elementId, people = []) {
   const container = document.getElementById(elementId);
   container.replaceChildren();
   const entries = Array.isArray(people) && people.length ? people : [{ name: 'Details coming soon', role: 'Team' }];
-  entries.forEach(person => {
+  entries.slice(0, elementId === 'castList' ? 10 : 8).forEach(person => {
     const profile = normalizePerson(person);
     const card = document.createElement('div');
     card.className = 'person-card';
@@ -128,6 +281,14 @@ document.getElementById('reviewForm').addEventListener('submit', async event => 
   } catch (error) {
     setMessage(reviewMessage, error.message, 'error visible');
   }
+});
+
+document.getElementById('closeTrailer').addEventListener('click', closeTrailer);
+document.getElementById('trailerModal').addEventListener('click', event => {
+  if (event.target.id === 'trailerModal') closeTrailer();
+});
+document.getElementById('trailerModal').addEventListener('close', () => {
+  document.getElementById('trailerFrame').src = '';
 });
 
 function normalizePerson(person) {

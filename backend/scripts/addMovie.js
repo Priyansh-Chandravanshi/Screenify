@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 const { db } = require('../lib/firebase');
 const SEAT_COUNT = 120;
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280';
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185';
 
 const SHOW_TEMPLATES = [
@@ -61,23 +62,30 @@ async function main() {
 
   const id = movie.id || `manual-${slug(movie.title)}`;
   const now = new Date().toISOString();
+  const runtime = Number(movie.runtime || movie.duration) || 120;
+  const crew = normalizePeople(movie.crew);
+  const trailer = normalizeTrailer(movie.trailer, movie.trailerUrl);
   await db.collection('movies').doc(id).set({
     title: movie.title,
     poster: resolvePoster(movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath || movie.tmdbPosterPath),
     backdrop: resolveBackdrop(movie.backdrop || movie.backdropUrl || movie.backdrop_path || movie.backdropPath || movie.tmdbBackdropPath),
-    duration: Number(movie.duration) || 120,
+    duration: runtime,
+    runtime,
     rating: Number(movie.rating) || 8,
     category: movie.category || 'Bollywood',
     genre: movie.genre || 'Drama',
+    genres: Array.isArray(movie.genres) ? movie.genres.map(String).filter(Boolean).slice(0, 6) : [],
     language: movie.language || 'Hindi',
     certificate: movie.certificate || 'UA',
+    director: movie.director || directorFromCrew(crew),
     synopsis: movie.synopsis || 'Now showing in cinemas.',
     about: movie.about || movie.synopsis || 'Now showing in cinemas.',
     cast: normalizePeople(movie.cast),
-    crew: normalizePeople(movie.crew),
+    crew,
     reviews: normalizeReviews(movie.reviews),
     platform: movie.platform || '',
-    trailerUrl: movie.trailerUrl || '',
+    trailer,
+    trailerUrl: movie.trailerUrl || trailer.url || '',
     releaseDate: movie.releaseDate || '',
     catalogueTag: movie.catalogueTag || 'Now showing',
     source: 'manual',
@@ -98,7 +106,10 @@ function normalizePeople(people) {
         photo: resolveProfile(person.photo || person.profile || person.profile_path || person.profilePath)
       };
     }
-    return { name: String(person), role: '', photo: '' };
+    const [role, name] = String(person || 'Unknown').includes(':')
+      ? String(person).split(':').map(value => value.trim())
+      : ['', String(person || 'Unknown').trim()];
+    return { name: name || role || 'Unknown', role: name ? role : '', photo: '' };
   });
 }
 
@@ -121,7 +132,7 @@ function resolveBackdrop(value) {
     return backdrop;
   }
   if (backdrop.startsWith('/')) {
-    return 'https://image.tmdb.org/t/p/w1280' + backdrop;
+    return `${TMDB_BACKDROP}${backdrop}`;
   }
   return backdrop;
 }
@@ -145,6 +156,30 @@ function normalizeReviews(reviews) {
     rating: Number(review.rating) || 8,
     text: String(review.text || 'Loved the big-screen experience.')
   }));
+}
+
+function directorFromCrew(crew = []) {
+  const director = crew.find(person => /\bDirector\b/i.test(person?.role || ''))
+    || crew.find(person => /\bCreator\b/i.test(person?.role || ''));
+  return director?.name || '';
+}
+
+function normalizeTrailer(value, fallbackUrl = '') {
+  const source = value && typeof value === 'object' ? value : {};
+  const key = String(source.key || '').trim();
+  const site = String(source.site || (key ? 'YouTube' : '')).trim();
+  const url = String(source.url || source.trailerUrl || fallbackUrl || '').trim();
+  const embedUrl = String(
+    source.embedUrl || (key && site.toLowerCase() === 'youtube' ? `https://www.youtube.com/embed/${key}` : '')
+  ).trim();
+  return {
+    name: String(source.name || (url ? 'Official trailer' : '')).trim(),
+    site,
+    type: String(source.type || (url ? 'Trailer' : '')).trim(),
+    key,
+    url,
+    embedUrl
+  };
 }
 
 main().catch(error => {

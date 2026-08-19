@@ -80,6 +80,14 @@ function normalize(value) {
     .trim();
 }
 
+function languageName(code) {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
+  } catch (error) {
+    return code || 'Multiple';
+  }
+}
+
 function releaseYear(value) {
   const year = String(value || '').slice(0, 4);
   return /^\d{4}$/.test(year) ? Number(year) : 0;
@@ -229,12 +237,60 @@ function normalizeCredits(credits = {}, detail = {}) {
   return { cast, crew };
 }
 
+function directorFromCrew(crew = []) {
+  const director = crew.find(person => /\bDirector\b/i.test(person?.role || ''))
+    || crew.find(person => /\bCreator\b/i.test(person?.role || ''));
+  return director?.name || '';
+}
+
+function emptyTrailer() {
+  return { name: '', site: '', type: '', key: '', url: '', embedUrl: '' };
+}
+
+function normalizeTrailer(videos = []) {
+  const trailer = (videos || [])
+    .filter(video => video?.key && video.site === 'YouTube' && ['Trailer', 'Teaser'].includes(video.type))
+    .sort((left, right) => {
+      const official = Number(Boolean(right.official)) - Number(Boolean(left.official));
+      if (official) return official;
+      const type = Number(right.type === 'Trailer') - Number(left.type === 'Trailer');
+      if (type) return type;
+      const name = Number(/official trailer/i.test(right.name || '')) - Number(/official trailer/i.test(left.name || ''));
+      if (name) return name;
+      return String(right.published_at || '').localeCompare(String(left.published_at || ''));
+    })[0];
+
+  if (!trailer) return emptyTrailer();
+  return {
+    name: String(trailer.name || 'Official trailer'),
+    site: 'YouTube',
+    type: String(trailer.type || 'Trailer'),
+    key: String(trailer.key),
+    url: `https://www.youtube.com/watch?v=${trailer.key}`,
+    embedUrl: `https://www.youtube.com/embed/${trailer.key}`
+  };
+}
+
+function runtimeMinutes(detail = {}, mediaType = 'movie') {
+  if (mediaType === 'movie') return Number(detail.runtime || 0);
+  const values = Array.isArray(detail.episode_run_time) ? detail.episode_run_time.filter(Boolean) : [];
+  if (values.length) return Number(values[0]);
+  return Number(detail.last_episode_to_air?.runtime || detail.next_episode_to_air?.runtime || 0);
+}
+
 async function fetchMediaDetailAndCredits(mediaType, id) {
-  const [detail, credits] = await Promise.all([
+  const [detail, credits, videos] = await Promise.all([
     tmdb(`/${mediaType}/${id}?language=en-IN`, { publicFallback: false }),
-    tmdb(`/${mediaType}/${id}/credits?language=en-IN`, { publicFallback: false })
+    tmdb(`/${mediaType}/${id}/credits?language=en-IN`, { publicFallback: false }),
+    tmdb(`/${mediaType}/${id}/videos?language=en-US`, { publicFallback: false })
   ]);
-  return { detail, ...normalizeCredits(credits, detail) };
+  const creditsPayload = normalizeCredits(credits, detail);
+  let trailer = normalizeTrailer(videos.results);
+  if (!trailer.url) {
+    const regionalVideos = await tmdb(`/${mediaType}/${id}/videos?language=en-IN`, { publicFallback: false });
+    trailer = normalizeTrailer(regionalVideos.results);
+  }
+  return { detail, ...creditsPayload, trailer };
 }
 
 function fallbackMatchFromStoredId(movie) {
@@ -253,7 +309,7 @@ async function main() {
   let updated = 0;
   let skipped = 0;
   console.log(tmdbToken()
-    ? 'Using TMDB API token for posters, banners, cast, crew and profile photos.'
+    ? 'Using TMDB API token for posters, banners, trailers, cast, crew and profile photos.'
     : 'TMDB token not found; using public TMDB search fallback for posters only.'
   );
 
@@ -291,14 +347,42 @@ async function main() {
 
     if (tmdbToken()) {
       try {
-        const { detail, cast, crew } = await fetchMediaDetailAndCredits(mediaType, match.id);
+        const { detail, cast, crew, trailer } = await fetchMediaDetailAndCredits(mediaType, match.id);
+        const runtime = runtimeMinutes(detail, mediaType);
+        const genres = (detail.genres || []).map(genre => genre.name).filter(Boolean);
+        const rating = Math.round(Number(detail.vote_average || 0) * 10) / 10;
         if (detail.poster_path) update.poster = `${TMDB_IMAGE}${detail.poster_path}`;
         if (detail.backdrop_path) update.backdrop = `${TMDB_BACKDROP}${detail.backdrop_path}`;
+        if (runtime) {
+          update.duration = runtime;
+          update.runtime = runtime;
+        }
+        if (genres.length) {
+          update.genre = genres.slice(0, 3).join(' / ');
+          update.genres = genres;
+        }
+        if (detail.original_language) update.language = languageName(detail.original_language);
+        if (rating) {
+          update.rating = rating;
+          update.tmdbRating = rating;
+        }
+        update.tmdbVoteCount = Number(detail.vote_count || 0);
+        if (detail.overview) {
+          update.synopsis = detail.overview;
+          update.about = detail.overview;
+        }
         if (cast.length) update.cast = cast;
-        if (crew.length) update.crew = crew;
+        if (crew.length) {
+          update.crew = crew;
+          update.director = directorFromCrew(crew);
+        }
+        if (trailer.url) {
+          update.trailer = trailer;
+          update.trailerUrl = trailer.url;
+        }
         await wait(REQUEST_DELAY_MS);
       } catch (error) {
-        console.warn(`Credits skipped for ${movie.title}: ${error.message}`);
+        console.warn(`TMDB details skipped for ${movie.title}: ${error.message}`);
         await wait(REQUEST_DELAY_MS);
       }
     }

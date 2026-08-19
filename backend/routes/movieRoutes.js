@@ -4,6 +4,7 @@ const { RequestError, numberInRange, optionalString, requiredString } = require(
 
 const router = express.Router();
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280';
 const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185';
 
 function requireAdmin(req, res, next) {
@@ -18,22 +19,29 @@ function moviePayload(body = {}) {
   const cast = Array.isArray(body.cast) ? body.cast.slice(0, 12) : [];
   const crew = Array.isArray(body.crew) ? body.crew.slice(0, 12) : [];
   const reviews = Array.isArray(body.reviews) ? body.reviews.slice(0, 6) : [];
+  const normalizedCrew = crew.map(personPayload);
+  const runtime = numberInRange(body.runtime ?? body.duration, 'Runtime', 1, 500);
+  const trailer = trailerPayload(body.trailer, body.trailerUrl);
 
   return {
     title: requiredString(body.title, 'Title'),
     poster: optionalString(resolvePoster(body.poster || body.posterUrl || body.poster_path || body.posterPath || body.tmdbPosterPath)),
     backdrop: optionalString(resolveBackdrop(body.backdrop || body.backdropUrl || body.backdrop_path || body.backdropPath || body.tmdbBackdropPath)),
-    duration: numberInRange(body.duration, 'Duration', 1, 500),
+    duration: runtime,
+    runtime,
     rating: numberInRange(body.rating, 'Rating', 0, 10, 8),
     category: optionalString(body.category, 'Bollywood', 40),
     genre: optionalString(body.genre, 'Drama', 80),
+    genres: Array.isArray(body.genres) ? body.genres.map(value => optionalString(value, '', 40)).filter(Boolean).slice(0, 6) : [],
     language: optionalString(body.language, 'Hindi', 50),
     certificate: optionalString(body.certificate, 'UA', 20),
     platform: optionalString(body.platform, '', 80),
-    trailerUrl: optionalString(body.trailerUrl, '', 500),
+    director: optionalString(body.director || directorFromCrew(normalizedCrew), '', 160),
+    trailer,
+    trailerUrl: optionalString(body.trailerUrl || trailer.url, '', 500),
     about: optionalString(body.about || body.synopsis, '', 1200),
     cast: cast.map(personPayload),
-    crew: crew.map(personPayload),
+    crew: normalizedCrew,
     reviews: reviews.map(reviewPayload),
     synopsis: optionalString(body.synopsis)
   };
@@ -58,7 +66,7 @@ function resolveBackdrop(value) {
     return backdrop;
   }
   if (backdrop.startsWith('/')) {
-    return `https://image.tmdb.org/t/p/w1280${backdrop}`;
+    return `${TMDB_BACKDROP}${backdrop}`;
   }
   return backdrop;
 }
@@ -83,7 +91,37 @@ function personPayload(value) {
       photo: optionalString(resolveProfile(value.photo || value.profile || value.profile_path || value.profilePath), '', 500)
     };
   }
-  return { name: optionalString(value, 'Unknown', 120), role: '', photo: '' };
+  const text = String(value || 'Unknown');
+  const [role, name] = text.includes(':')
+    ? text.split(':').map(part => part.trim())
+    : ['', text.trim()];
+  return { name: optionalString(name || role, 'Unknown', 120), role: optionalString(name ? role : '', '', 120), photo: '' };
+}
+
+function directorFromCrew(crew = []) {
+  const director = crew.find(person => /\bDirector\b/i.test(person?.role || ''))
+    || crew.find(person => /\bCreator\b/i.test(person?.role || ''));
+  return director?.name || '';
+}
+
+function trailerPayload(value, fallbackUrl = '') {
+  const source = value && typeof value === 'object' ? value : {};
+  const key = optionalString(source.key, '', 80);
+  const site = optionalString(source.site, key ? 'YouTube' : '', 80);
+  const url = optionalString(source.url || source.trailerUrl || fallbackUrl, '', 500);
+  const embedUrl = optionalString(
+    source.embedUrl || (key && site.toLowerCase() === 'youtube' ? `https://www.youtube.com/embed/${key}` : ''),
+    '',
+    500
+  );
+  return {
+    name: optionalString(source.name || (url ? 'Official trailer' : ''), '', 160),
+    site,
+    type: optionalString(source.type || (url ? 'Trailer' : ''), '', 80),
+    key,
+    url,
+    embedUrl
+  };
 }
 
 function reviewPayload(value) {
@@ -106,8 +144,10 @@ router.get('/movies', async (req, res, next) => {
         movie.category,
         movie.language,
         movie.certificate,
+        movie.director,
         movie.synopsis,
         movie.about,
+        ...(Array.isArray(movie.genres) ? movie.genres : []),
         ...(Array.isArray(movie.cast) ? movie.cast.map(person => person?.name || person) : [])
       ].some(value => String(value || '').toLowerCase().includes(query)))
       .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
