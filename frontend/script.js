@@ -1,4 +1,4 @@
-const { request, save, load, poster, bindPosterFallback, setMessage } = window.Screenify;
+const { request, save, load, moviePoster, movieBackdrop, bindPosterFallback, setMessage } = window.Screenify;
 const cities = ['Indore', 'Bhopal', 'Jaipur', 'Mumbai', 'Delhi', 'Pune', 'Hyderabad', 'Bengaluru', 'Chennai', 'Kolkata'];
 let movies = [];
 let slideIndex = 0;
@@ -6,6 +6,8 @@ let slideTimer;
 let activeGenre = 'All';
 let activeCategory = 'All';
 const categories = ['All', 'Bollywood', 'South Indian', 'Hollywood', 'Web Series', 'Thriller'];
+const user = load('screenifyUser');
+let wishlist = new Set(user?.wishlist || []);
 
 const movieList = document.getElementById('movieList');
 const movieMessage = document.getElementById('movieMessage');
@@ -21,7 +23,7 @@ function movieCard(movie) {
   card.className = 'movie-card';
 
   const image = document.createElement('img');
-  image.src = poster(movie.poster, movie.title, movie.genre);
+  image.src = moviePoster(movie);
   image.alt = `${movie.title} poster`;
   image.loading = 'lazy';
   bindPosterFallback(image, movie.title, movie.genre);
@@ -29,6 +31,16 @@ function movieCard(movie) {
   const badge = document.createElement('span');
   badge.className = 'movie-badge';
   badge.textContent = movie.catalogueTag || (movie.releaseDate ? 'New release' : 'Now showing');
+
+  const wishlistButton = document.createElement('button');
+  wishlistButton.className = `wishlist-button ${wishlist.has(movie._id) ? 'active' : ''}`;
+  wishlistButton.type = 'button';
+  wishlistButton.textContent = wishlist.has(movie._id) ? '♥' : '♡';
+  wishlistButton.setAttribute('aria-label', `${wishlist.has(movie._id) ? 'Remove from' : 'Add to'} wishlist`);
+  wishlistButton.addEventListener('click', event => {
+    event.stopPropagation();
+    toggleWishlist(movie, wishlistButton);
+  });
 
   const title = document.createElement('h3');
   title.textContent = movie.title;
@@ -43,8 +55,34 @@ function movieCard(movie) {
   button.textContent = 'Book tickets';
   button.addEventListener('click', () => chooseMovie(movie));
 
-  card.append(image, badge, title, details, rating, button);
+  card.append(image, wishlistButton, badge, title, details, rating, button);
   return card;
+}
+
+async function toggleWishlist(movie, button) {
+  if (!user?.email) {
+    window.location.href = 'login.html';
+    return;
+  }
+  const active = wishlist.has(movie._id);
+  try {
+    if (active) {
+      await request(`/users/${encodeURIComponent(user.email)}/wishlist/${movie._id}`, { method: 'DELETE' });
+      wishlist.delete(movie._id);
+    } else {
+      await request(`/users/${encodeURIComponent(user.email)}/wishlist`, {
+        method: 'POST',
+        body: JSON.stringify({ movieId: movie._id })
+      });
+      wishlist.add(movie._id);
+    }
+    const updatedUser = { ...user, wishlist: [...wishlist] };
+    save('screenifyUser', updatedUser);
+    button.classList.toggle('active', !active);
+    button.textContent = active ? '♡' : '♥';
+  } catch (error) {
+    setMessage(movieMessage, error.message, 'error visible');
+  }
 }
 
 function filteredMovies() {
@@ -136,7 +174,7 @@ function renderSlides() {
   movies.slice(0, 3).forEach(movie => {
     const slide = document.createElement('article');
     slide.className = 'slide';
-    slide.style.backgroundImage = `linear-gradient(90deg, rgba(8,10,20,.94), rgba(8,10,20,.25)), url("${poster(movie.poster, movie.title, movie.genre)}")`;
+    slide.style.backgroundImage = `linear-gradient(90deg, rgba(8,10,20,.94), rgba(8,10,20,.25)), url("${movieBackdrop(movie)}")`;
 
     const content = document.createElement('div');
     content.className = 'slide-content';
@@ -201,6 +239,13 @@ function renderCities(query = '') {
 
 document.getElementById('search').addEventListener('input', event => {
   renderMovies(filteredMovies());
+  renderSearchSuggestions(event.target.value);
+});
+document.getElementById('search').addEventListener('focus', event => renderSearchSuggestions(event.target.value));
+document.addEventListener('click', event => {
+  if (!event.target.closest('.search-box')) {
+    document.getElementById('searchSuggestions').classList.add('hidden');
+  }
 });
 document.getElementById('openCity').addEventListener('click', () => {
   renderCities();
@@ -212,9 +257,53 @@ document.getElementById('nextSlide').addEventListener('click', () => showSlide(s
 
 const city = localStorage.getItem('screenifyCity');
 if (city) document.getElementById('selectedCity').textContent = city;
-const user = load('screenifyUser');
-if (user) document.getElementById('accountButton').textContent = user.name || 'Account';
+if (user) {
+  const accountButton = document.getElementById('accountButton');
+  accountButton.textContent = user.name || 'Dashboard';
+  accountButton.href = 'dashboard.html';
+}
 
-loadMovies();
+async function refreshWishlist() {
+  if (!user?.email) return;
+  try {
+    const movies = await request(`/users/${encodeURIComponent(user.email)}/wishlist`);
+    wishlist = new Set(movies.map(movie => movie._id));
+    save('screenifyUser', { ...user, wishlist: [...wishlist] });
+  } catch (error) {
+    wishlist = new Set(user?.wishlist || []);
+  }
+}
+
+function renderSearchSuggestions(query = '') {
+  const box = document.getElementById('searchSuggestions');
+  const value = query.trim().toLowerCase();
+  if (!value) {
+    box.classList.add('hidden');
+    return;
+  }
+  const suggestions = movies
+    .filter(movie => [
+      movie.title,
+      movie.genre,
+      movie.language,
+      movie.category
+    ].some(item => String(item || '').toLowerCase().includes(value)))
+    .slice(0, 6);
+  box.replaceChildren();
+  suggestions.forEach(movie => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = movie.title;
+    button.addEventListener('click', () => {
+      document.getElementById('search').value = movie.title;
+      box.classList.add('hidden');
+      renderMovies(filteredMovies());
+    });
+    box.appendChild(button);
+  });
+  box.classList.toggle('hidden', !suggestions.length);
+}
+
+refreshWishlist().finally(loadMovies);
 slideTimer = window.setInterval(() => showSlide(slideIndex + 1), 5000);
 window.addEventListener('pagehide', () => window.clearInterval(slideTimer));

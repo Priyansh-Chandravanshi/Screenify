@@ -1,6 +1,7 @@
-const { request, save, poster, bindPosterFallback, setMessage } = window.Screenify;
+const { request, save, load, moviePoster, movieBackdrop, personPhoto, bindPosterFallback, setMessage } = window.Screenify;
 const movieId = new URLSearchParams(window.location.search).get('id');
 const message = document.getElementById('message');
+let currentMovie;
 
 async function loadMovie() {
   if (!movieId) {
@@ -10,6 +11,7 @@ async function loadMovie() {
 
   try {
     const movie = await request(`/movies/${movieId}`);
+    currentMovie = movie;
     save('selectedMovie', movie);
     document.title = `${movie.title} | Screenify`;
     document.getElementById('title').textContent = movie.title;
@@ -20,18 +22,18 @@ async function loadMovie() {
     document.getElementById('aboutMovie').textContent = movie.about || movie.synopsis || 'Book the best seats for this screening.';
     renderPeople('castList', movie.cast);
     renderPeople('crewList', movie.crew);
-    renderReviews(movie.reviews, movie.rating);
+    await loadReviews(movie);
     const trailerButton = document.getElementById('trailerButton');
     if (movie.trailerUrl) {
       trailerButton.href = movie.trailerUrl;
       trailerButton.classList.remove('hidden');
     }
     const image = document.getElementById('poster');
-    image.src = poster(movie.poster, movie.title, movie.genre);
+    image.src = moviePoster(movie);
     image.alt = `${movie.title} poster`;
     bindPosterFallback(image, movie.title, movie.genre);
     document.getElementById('movieBanner').style.backgroundImage =
-      `linear-gradient(90deg, rgba(8,10,20,.98) 28%, rgba(8,10,20,.72), rgba(8,10,20,.88)), url("${poster(movie.poster, movie.title, movie.genre)}")`;
+      `linear-gradient(90deg, rgba(8,10,20,.98) 28%, rgba(8,10,20,.72), rgba(8,10,20,.88)), url("${movieBackdrop(movie)}")`;
     document.getElementById('bookButton').addEventListener('click', () => {
       window.location.href = `shows.html?movieId=${movie._id}`;
     });
@@ -53,7 +55,7 @@ function renderPeople(elementId, people = []) {
     const card = document.createElement('div');
     card.className = 'person-card';
     const image = document.createElement('img');
-    image.src = profile.photo || avatar(profile.name, profile.role);
+    image.src = personPhoto(profile.photo) || avatar(profile.name, profile.role);
     image.alt = `${profile.name} photo`;
     const info = document.createElement('span');
     const name = document.createElement('strong');
@@ -88,12 +90,52 @@ function renderReviews(reviews = [], fallbackRating = 8) {
   });
 }
 
+async function loadReviews(movie) {
+  try {
+    const reviews = await request(`/movies/${movie._id}/reviews`);
+    renderReviews(reviews.length ? reviews : movie.reviews, movie.rating);
+    if (reviews.length) {
+      document.getElementById('ratingScore').textContent = `${Number(movie.rating || 0).toFixed(1)}/10`;
+    }
+  } catch (error) {
+    renderReviews(movie.reviews, movie.rating);
+  }
+}
+
+document.getElementById('reviewForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const user = load('screenifyUser');
+  const reviewMessage = document.getElementById('reviewMessage');
+  if (!user?.email) {
+    setMessage(reviewMessage, 'Sign in before posting a review.', 'error visible');
+    return;
+  }
+  try {
+    const result = await request(`/movies/${movieId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: user.email,
+        name: user.name || 'Screenify user',
+        rating: Number(document.getElementById('reviewRating').value),
+        text: document.getElementById('reviewText').value.trim()
+      })
+    });
+    currentMovie.rating = result.averageRating;
+    document.getElementById('ratingScore').textContent = `${Number(result.averageRating || 0).toFixed(1)}/10`;
+    document.getElementById('reviewText').value = '';
+    setMessage(reviewMessage, 'Review saved. Thanks for rating this movie.', 'visible');
+    await loadReviews(currentMovie);
+  } catch (error) {
+    setMessage(reviewMessage, error.message, 'error visible');
+  }
+});
+
 function normalizePerson(person) {
   if (person && typeof person === 'object') {
     return {
       name: person.name || 'Unknown',
       role: person.role || '',
-      photo: person.photo || ''
+      photo: person.photo || person.profile || person.profile_path || person.profilePath || ''
     };
   }
   const [role, name] = String(person || 'Unknown').includes(':')

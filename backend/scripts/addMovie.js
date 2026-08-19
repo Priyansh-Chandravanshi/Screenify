@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 const { db } = require('../lib/firebase');
 const SEAT_COUNT = 120;
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185';
 
 const SHOW_TEMPLATES = [
   { suffix: 'pvr-morning', theatre: 'PVR INOX Nexus Mall', auditorium: 'Audi 2', format: '2D', daysAhead: 0, time: '10:30 AM', price: 220 },
@@ -94,7 +95,7 @@ function normalizePeople(people) {
       return {
         name: String(person.name || 'Unknown'),
         role: String(person.role || ''),
-        photo: String(person.photo || '')
+        photo: resolveProfile(person.photo || person.profile || person.profile_path || person.profilePath)
       };
     }
     return { name: String(person), role: '', photo: '' };
@@ -123,6 +124,18 @@ function resolveBackdrop(value) {
     return 'https://image.tmdb.org/t/p/w1280' + backdrop;
   }
   return backdrop;
+}
+
+function resolveProfile(value) {
+  const profile = String(value || '').trim();
+  if (!profile) return '';
+  if (/^https?:\/\//i.test(profile) || profile.startsWith('data:') || profile.startsWith('public/')) {
+    return profile;
+  }
+  if (profile.startsWith('/')) {
+    return `${TMDB_PROFILE}${profile}`;
+  }
+  return profile;
 }
 
 function normalizeReviews(reviews) {

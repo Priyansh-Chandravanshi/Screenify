@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="surface-page">
+  <header class="simple-header light">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <button class="location" data-theme-toggle type="button">Dark</button>
+    <a class="back-link" href="index.html">Movies</a>
+  </header>
+  <main class="dashboard-page">
+    <section class="dashboard-hero">
+      <div class="dashboard-profile">
+        <div class="dashboard-avatar" id="dashboardAvatar">S</div>
+        <div>
+          <p class="eyebrow">My Screenify</p>
+          <h1 id="dashboardName">Dashboard</h1>
+          <p class="muted" id="dashboardEmail"></p>
+        </div>
+      </div>
+    </section>
+    <section class="dashboard-stats">
+      <article><strong id="bookingCount">0</strong><span>Bookings</span></article>
+      <article><strong id="wishlistCount">0</strong><span>Wishlist</span></article>
+      <article><strong id="ticketCount">0</strong><span>Tickets</span></article>
+    </section>
+    <section class="dashboard-grid">
+      <div class="dashboard-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">History</p>
+            <h2>My bookings</h2>
+          </div>
+        </div>
+        <p class="notice visible" id="bookingMessage">Loading bookings...</p>
+        <div class="dashboard-list" id="bookingList"></div>
+      </div>
+      <div class="dashboard-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Saved</p>
+            <h2>Wishlist</h2>
+          </div>
+        </div>
+        <p class="notice visible" id="wishlistMessage">Loading wishlist...</p>
+        <div class="dashboard-list" id="wishlistList"></div>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

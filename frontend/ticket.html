@@ -31,7 +31,10 @@
         <img id="qrCode" alt="Ticket QR code">
         <p>Show this QR code at the entrance</p>
       </div>
-      <button class="button no-print" id="printButton" type="button">Print ticket</button>
+      <div class="ticket-actions no-print">
+        <a class="button" id="pdfButton" href="#">Download PDF</a>
+        <button class="button ghost" id="printButton" type="button">Print ticket</button>
+      </div>
     </article>
   </main>
   <script src="app.js"></script>

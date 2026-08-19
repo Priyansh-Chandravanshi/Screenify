@@ -33,9 +33,9 @@ if (!booking) {
     emailStatus.textContent = 'Booking confirmed. Email delivery will work once mail settings are configured.';
     emailStatus.className = 'email-status warning';
   }
-  const qrData = encodeURIComponent(booking.reference);
-  document.getElementById('qrCode').src =
-    `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${qrData}`;
+  document.getElementById('qrCode').src = booking.qrDataUrl ||
+    `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(booking.reference)}`;
+  document.getElementById('pdfButton').href = `/api/bookings/${encodeURIComponent(booking.reference)}/ticket.pdf`;
   message.className = 'notice';
   document.getElementById('ticket').classList.remove('hidden');
 }

@@ -1,9 +1,11 @@
-const { request, save, poster, bindPosterFallback, date, money, setMessage } = window.Screenify;
+const { request, save, moviePoster, bindPosterFallback, date, money, setMessage } = window.Screenify;
 const movieId = new URLSearchParams(window.location.search).get('movieId');
 const showList = document.getElementById('showList');
 const showMessage = document.getElementById('showMessage');
 let shows = [];
 let selectedDate = '';
+let selectedFormat = 'All';
+let selectedMaxPrice = 0;
 
 function dayKey(value) {
   const valueDate = new Date(value);
@@ -34,7 +36,12 @@ function renderDateFilter() {
 
 function renderShows() {
   showList.replaceChildren();
-  const available = shows.filter(show => dayKey(show.date) === selectedDate);
+  const available = shows.filter(show => {
+    const matchesDate = dayKey(show.date) === selectedDate;
+    const matchesFormat = selectedFormat === 'All' || show.format === selectedFormat;
+    const matchesPrice = !selectedMaxPrice || Number(show.price || 0) <= selectedMaxPrice;
+    return matchesDate && matchesFormat && matchesPrice;
+  });
   if (!available.length) {
     setMessage(showMessage, 'No showtimes available on this date.', 'visible');
     return;
@@ -83,6 +90,18 @@ function renderShows() {
   });
 }
 
+function renderShowFilters() {
+  const formatFilter = document.getElementById('formatFilter');
+  const formats = ['All', ...new Set(shows.map(show => show.format).filter(Boolean))];
+  formatFilter.replaceChildren();
+  formats.forEach(format => {
+    const option = document.createElement('option');
+    option.value = format;
+    option.textContent = format === 'All' ? 'All formats' : format;
+    formatFilter.appendChild(option);
+  });
+}
+
 async function loadShows() {
   if (!movieId) {
     setMessage(showMessage, 'Choose a movie before selecting a showtime.', 'error visible');
@@ -96,7 +115,7 @@ async function loadShows() {
     document.getElementById('movieTitle').textContent = movie.title;
     document.getElementById('movieMeta').textContent = `${movie.genre} | ${movie.language} | ${movie.duration} min`;
     const showPoster = document.getElementById('showPoster');
-    showPoster.src = poster(movie.poster, movie.title, movie.genre);
+    showPoster.src = moviePoster(movie);
     showPoster.alt = `${movie.title} poster`;
     bindPosterFallback(showPoster, movie.title, movie.genre);
     shows = listings;
@@ -105,11 +124,21 @@ async function loadShows() {
       setMessage(showMessage, 'No showtimes available for this movie yet.', 'visible');
       return;
     }
+    renderShowFilters();
     renderDateFilter();
     renderShows();
   } catch (error) {
     setMessage(showMessage, error.message, 'error visible');
   }
 }
+
+document.getElementById('formatFilter').addEventListener('change', event => {
+  selectedFormat = event.target.value;
+  renderShows();
+});
+document.getElementById('priceFilter').addEventListener('change', event => {
+  selectedMaxPrice = Number(event.target.value);
+  renderShows();
+});
 
 loadShows();

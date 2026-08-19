@@ -4,6 +4,7 @@ const { RequestError, numberInRange, optionalString, requiredString } = require(
 
 const router = express.Router();
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185';
 
 function requireAdmin(req, res, next) {
   const key = process.env.ADMIN_API_KEY;
@@ -62,12 +63,24 @@ function resolveBackdrop(value) {
   return backdrop;
 }
 
+function resolveProfile(value) {
+  const profile = String(value || '').trim();
+  if (!profile) return '';
+  if (/^https?:\/\//i.test(profile) || profile.startsWith('data:') || profile.startsWith('public/')) {
+    return profile;
+  }
+  if (profile.startsWith('/')) {
+    return `${TMDB_PROFILE}${profile}`;
+  }
+  return profile;
+}
+
 function personPayload(value) {
   if (value && typeof value === 'object') {
     return {
       name: optionalString(value.name, 'Unknown', 120),
       role: optionalString(value.role, '', 120),
-      photo: optionalString(value.photo, '', 500)
+      photo: optionalString(resolveProfile(value.photo || value.profile || value.profile_path || value.profilePath), '', 500)
     };
   }
   return { name: optionalString(value, 'Unknown', 120), role: '', photo: '' };

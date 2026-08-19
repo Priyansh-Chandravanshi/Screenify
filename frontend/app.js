@@ -43,7 +43,8 @@
   }
 
   function poster(url, title = 'Screenify', genre = 'Cinema') {
-    if (url) return url;
+    const imageUrl = tmdbImageUrl(url);
+    if (imageUrl) return imageUrl;
     const palettes = [
       ['#131722', '#e7335f', '#ffd166'],
       ['#0f172a', '#2563eb', '#a7f3d0'],
@@ -89,6 +90,42 @@
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
+  function moviePoster(movie = {}) {
+    return poster(
+      movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath || movie.tmdbPosterPath || movie.backdrop_path || movie.backdropPath,
+      movie.title,
+      movie.genre
+    );
+  }
+
+  function movieBackdrop(movie = {}) {
+    return poster(
+      movie.backdrop || movie.backdropUrl || movie.backdrop_path || movie.backdropPath || movie.poster || movie.posterUrl || movie.poster_path || movie.posterPath,
+      movie.title,
+      movie.genre
+    );
+  }
+
+  function personPhoto(value) {
+    const imageUrl = tmdbImageUrl(value);
+    if (!imageUrl) return '';
+    return imageUrl.startsWith('https://image.tmdb.org/t/p/w780/')
+      ? imageUrl.replace('/w780/', '/w185/')
+      : imageUrl;
+  }
+
+  function tmdbImageUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('public/')) {
+      return raw;
+    }
+    if (raw.startsWith('/')) {
+      return `https://image.tmdb.org/t/p/w780${raw}`;
+    }
+    return raw;
+  }
+
   function bindPosterFallback(image, title = 'Screenify', genre = 'Cinema') {
     image.addEventListener('error', () => {
       image.src = poster('', title, genre);
@@ -109,5 +146,47 @@
     element.className = `notice ${kind}`.trim();
   }
 
-  window.Screenify = { request, save, load, money, date, poster, bindPosterFallback, setMessage };
+  function currentUser() {
+    return load('screenifyUser');
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('screenifyTheme');
+    if (saved === 'dark') {
+      document.body.classList.add('dark-mode');
+    }
+    const syncThemeButton = button => {
+      const dark = document.body.classList.contains('dark-mode');
+      button.textContent = dark ? 'Light' : 'Dark';
+      button.setAttribute('aria-pressed', String(dark));
+      button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    };
+    document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+      syncThemeButton(button);
+      button.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const dark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('screenifyTheme', dark ? 'dark' : 'light');
+        document.querySelectorAll('[data-theme-toggle]').forEach(syncThemeButton);
+      });
+    });
+  }
+
+  window.Screenify = {
+    request,
+    save,
+    load,
+    money,
+    date,
+    poster,
+    moviePoster,
+    movieBackdrop,
+    personPhoto,
+    bindPosterFallback,
+    setMessage,
+    currentUser,
+    initTheme
+  };
+
+  document.addEventListener('DOMContentLoaded', initTheme);
 }());

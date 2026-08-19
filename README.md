@@ -10,7 +10,7 @@ Screenify is a full movie booking flow for discovering movies, selecting a show 
 - Demo checkout validation and confirmed booking reference ticket (no real payment gateway)
 - Registration/login with `scrypt` password hashing
 - Structured API errors, health endpoint and protected catalogue-write routes
-- TMDB now-playing import for real current movie titles, posters and metadata
+- TMDB now-playing import for real current movie titles, posters, cast, crew and metadata
 - Email ticket delivery after booking confirmation through configurable SMTP
 
 ## Firebase Setup
@@ -50,6 +50,13 @@ npm run sync:movies
 
 The importer removes the four fictional starter movies and loads current now-playing titles for region `IN`, while preserving seats on already-created imported shows.
 If `TMDB_ACCESS_TOKEN` is still the placeholder value, the same command seeds a curated real-release fallback catalogue with demo showtimes so the app is usable while you arrange a TMDB token.
+
+Refresh real TMDB posters, wide banners, cast, crew and profile photos for the movies already in Firestore:
+
+```powershell
+cd backend
+npm run update:tmdb-media
+```
 
 Add one custom movie with demo shows:
 
@@ -137,3 +144,4 @@ Open `http://localhost:5000`. The Express server serves both the REST API and fr
 cd backend
 npm run check
 ```
+ 

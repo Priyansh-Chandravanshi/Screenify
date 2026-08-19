@@ -25,6 +25,13 @@
         <input class="field" id="customerEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <small>Your confirmed ticket will be emailed to this address.</small>
       </label>
+      <div class="coupon-box">
+        <label>Coupon code
+          <input class="field" id="couponCode" placeholder="WELCOME100">
+        </label>
+        <button class="button ghost" id="applyCoupon" type="button">Apply</button>
+      </div>
+      <p class="coupon-message" id="couponMessage"></p>
       <div class="payment-methods" role="radiogroup">
         <label class="payment-option active"><input type="radio" name="method" value="upi" checked> UPI</label>
         <label class="payment-option"><input type="radio" name="method" value="card"> Card</label>
@@ -51,6 +58,7 @@
       <h3 id="movieName"></h3>
       <p class="muted" id="showMeta"></p>
       <div class="order-row"><span>Convenience fee</span><strong>Included</strong></div>
+      <div class="order-row"><span>Coupon discount</span><strong id="discount">INR 0</strong></div>
       <div class="order-row"><span>Seats</span><strong id="seatList"></strong></div>
       <div class="order-row total"><span>Total</span><strong id="amount"></strong></div>
     </aside>

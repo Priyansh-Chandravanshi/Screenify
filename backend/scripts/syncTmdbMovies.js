@@ -6,7 +6,20 @@ const { db } = require('../lib/firebase');
 const TMDB_API = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w780';
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w1280';
+const TMDB_PROFILE = 'https://image.tmdb.org/t/p/w185';
 const SEAT_COUNT = 120;
+const CREW_JOB_PRIORITY = [
+  'Director',
+  'Creator',
+  'Screenplay',
+  'Writer',
+  'Story',
+  'Producer',
+  'Executive Producer',
+  'Original Music Composer',
+  'Director of Photography',
+  'Editor'
+];
 const DEMO_MOVIE_IDS = [
   'midnight-runway',
   'a-sky-full-of-notes',
@@ -798,11 +811,92 @@ function normalizePeople(people = []) {
       return {
         name: String(person.name || 'Unknown'),
         role: String(person.role || ''),
-        photo: String(person.photo || '')
+        photo: profileUrl(person.photo || person.profile || person.profile_path || person.profilePath)
       };
     }
     return { name: String(person), role: '', photo: '' };
   });
+}
+
+function profileUrl(value) {
+  const photo = String(value || '').trim();
+  if (!photo) return '';
+  if (/^https?:\/\//i.test(photo) || photo.startsWith('data:') || photo.startsWith('public/')) {
+    return photo;
+  }
+  if (photo.startsWith('/')) {
+    return `${TMDB_PROFILE}${photo}`;
+  }
+  return photo;
+}
+
+function normalize(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function rankedCrew(crew = []) {
+  return crew
+    .filter(person => person?.name && CREW_JOB_PRIORITY.includes(person.job))
+    .sort((left, right) => (
+      CREW_JOB_PRIORITY.indexOf(left.job) - CREW_JOB_PRIORITY.indexOf(right.job)
+    ) || Number(right.popularity || 0) - Number(left.popularity || 0));
+}
+
+function mergeCrewPerson(grouped, person, role) {
+  const name = String(person?.name || '').trim();
+  if (!name || !role) return;
+  const key = normalize(name);
+  const existing = grouped.get(key) || { name, roles: [], photo: '' };
+  if (!existing.roles.includes(role)) existing.roles.push(role);
+  existing.photo = existing.photo || profileUrl(person.profile_path || person.photo);
+  grouped.set(key, existing);
+}
+
+function normalizeCredits(credits = {}, detail = {}) {
+  const seenCast = new Set();
+  const cast = (credits.cast || [])
+    .filter(person => person?.name)
+    .sort((left, right) => Number(left.order || 0) - Number(right.order || 0))
+    .filter(person => {
+      const key = normalize(person.name);
+      if (!key || seenCast.has(key)) return false;
+      seenCast.add(key);
+      return true;
+    })
+    .slice(0, 8)
+    .map(person => ({
+      name: String(person.name || 'Unknown'),
+      role: String(person.character || 'Actor'),
+      photo: profileUrl(person.profile_path)
+    }));
+
+  const groupedCrew = new Map();
+  (detail.created_by || []).forEach(person => mergeCrewPerson(groupedCrew, person, 'Creator'));
+  rankedCrew(credits.crew || []).forEach(person => mergeCrewPerson(groupedCrew, person, person.job));
+
+  const crew = Array.from(groupedCrew.values())
+    .slice(0, 8)
+    .map(person => ({
+      name: person.name,
+      role: person.roles.slice(0, 2).join(', '),
+      photo: person.photo
+    }));
+
+  return { cast, crew };
+}
+
+async function fetchMovieCredits(detail) {
+  try {
+    const credits = await tmdb(`/movie/${detail.id}/credits?language=en-IN`);
+    return normalizeCredits(credits, detail);
+  } catch (error) {
+    console.warn(`Credits skipped for ${detail.title}: ${error.message}`);
+    return { cast: [], crew: [] };
+  }
 }
 
 function defaultReviews(item) {
@@ -907,6 +1001,7 @@ async function syncMovies() {
 
   for (const item of candidates) {
     const detail = await tmdb(`/movie/${item.id}?language=en-IN`);
+    const credits = await fetchMovieCredits(detail);
     const movieId = `tmdb-${item.id}`;
     const movie = {
       title: detail.title,
@@ -920,8 +1015,8 @@ async function syncMovies() {
       certificate: 'UA',
       synopsis: detail.overview || 'Now playing in cinemas.',
       about: detail.overview || 'Now playing in cinemas.',
-      cast: [],
-      crew: [],
+      cast: credits.cast,
+      crew: credits.crew,
       reviews: defaultReviews({
         rating: Math.round(Number(detail.vote_average || 0) * 10) / 10,
         category: 'Hollywood'

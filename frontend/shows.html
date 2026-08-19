@@ -22,6 +22,21 @@
     </section>
     <p class="listing-note">Movie information is sourced from TMDB. Theatre showtimes below are Screenify demo listings for this project.</p>
     <div class="date-filter" id="dateFilter"></div>
+    <div class="show-filter-row">
+      <label>Format
+        <select class="field" id="formatFilter">
+          <option value="All">All formats</option>
+        </select>
+      </label>
+      <label>Max price
+        <select class="field" id="priceFilter">
+          <option value="0">Any price</option>
+          <option value="200">Under INR 200</option>
+          <option value="300">Under INR 300</option>
+          <option value="400">Under INR 400</option>
+        </select>
+      </label>
+    </div>
     <p class="notice visible" id="showMessage">Loading showtimes...</p>
     <section class="theatre-list" id="showList"></section>
   </main>

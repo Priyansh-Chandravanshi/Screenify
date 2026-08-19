@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | Screenify</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="surface-page">
+  <header class="simple-header light">
+    <a class="logo" href="index.html"><span>S</span> Screenify</a>
+    <button class="location" data-theme-toggle type="button">Dark</button>
+    <a class="back-link" href="index.html">Movies</a>
+  </header>
+  <main class="dashboard-page">
+    <section class="dashboard-hero">
+      <p class="eyebrow">Admin</p>
+      <h1>Screenify analytics</h1>
+      <p class="muted">Enter your admin API key to view booking and revenue stats.</p>
+      <div class="admin-key-row">
+        <input class="field" id="adminKey" placeholder="ADMIN_API_KEY">
+        <button class="button" id="loadAdmin" type="button">Load dashboard</button>
+      </div>
+    </section>
+    <p class="notice" id="adminMessage"></p>
+    <section class="dashboard-stats">
+      <article><strong id="adminMovies">0</strong><span>Movies</span></article>
+      <article><strong id="adminUsers">0</strong><span>Users</span></article>
+      <article><strong id="adminBookings">0</strong><span>Bookings</span></article>
+      <article><strong id="adminRevenue">INR 0</strong><span>Revenue</span></article>
+    </section>
+    <section class="analytics-panel">
+      <div>
+        <p class="eyebrow">Popular</p>
+        <h2 id="popularMovie">No bookings yet</h2>
+        <p class="muted" id="ticketsSold">0 tickets sold</p>
+      </div>
+      <div class="bar-chart" id="revenueChart"></div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

@@ -4,6 +4,8 @@ const form = document.getElementById('paymentForm');
 const message = document.getElementById('paymentMessage');
 const user = load('screenifyUser');
 const customerEmail = document.getElementById('customerEmail');
+let couponCode = '';
+let discount = 0;
 
 if (user?.email) {
   customerEmail.value = user.email;
@@ -32,6 +34,26 @@ function validatePayment(method) {
   return '';
 }
 
+function couponDiscount(code, subtotal) {
+  const normalized = code.trim().toUpperCase();
+  if (normalized === 'WELCOME100') return Math.min(100, Math.max(0, subtotal - 1));
+  if (normalized === 'STUDENT20') return Math.min(Math.round(subtotal * 0.2), Math.max(0, subtotal - 1));
+  if (normalized === 'SCREENIFY50') return Math.min(50, Math.max(0, subtotal - 1));
+  return 0;
+}
+
+function payableAmount() {
+  return Math.max(0, (checkout?.amount || 0) - discount);
+}
+
+function refreshTotals() {
+  if (!checkout) return;
+  document.getElementById('discount').textContent = discount ? `- ${money(discount)}` : money(0);
+  document.getElementById('amount').textContent = money(payableAmount());
+  document.getElementById('payButton').textContent = `Confirm booking - ${money(payableAmount())}`;
+  document.getElementById('animationAmount').textContent = money(payableAmount());
+}
+
 if (!checkout) {
   document.getElementById('orderCard').classList.add('hidden');
   setMessage(message, 'Your checkout has expired. Please select seats again.', 'error visible');
@@ -41,10 +63,27 @@ if (!checkout) {
   document.getElementById('showMeta').textContent =
     `${checkout.theatre} | ${date(checkout.showDate)} ${checkout.time}`;
   document.getElementById('seatList').textContent = checkout.seatLabels.join(', ');
-  document.getElementById('amount').textContent = money(checkout.amount);
-  document.getElementById('payButton').textContent = `Confirm booking - ${money(checkout.amount)}`;
-  document.getElementById('animationAmount').textContent = money(checkout.amount);
+  refreshTotals();
 }
+
+document.getElementById('applyCoupon').addEventListener('click', () => {
+  const input = document.getElementById('couponCode');
+  const message = document.getElementById('couponMessage');
+  const nextDiscount = couponDiscount(input.value, checkout?.amount || 0);
+  if (!nextDiscount) {
+    couponCode = '';
+    discount = 0;
+    message.textContent = 'Try WELCOME100, STUDENT20 or SCREENIFY50.';
+    message.className = 'coupon-message error';
+    refreshTotals();
+    return;
+  }
+  couponCode = input.value.trim().toUpperCase();
+  discount = nextDiscount;
+  message.textContent = `${couponCode} applied. You saved ${money(discount)}.`;
+  message.className = 'coupon-message success';
+  refreshTotals();
+});
 
 document.querySelectorAll('input[name="method"]').forEach(input => {
   input.addEventListener('change', event => {
@@ -79,7 +118,8 @@ form.addEventListener('submit', async event => {
         showId: checkout.showId,
         seats: checkout.seats,
         paymentMethod: method,
-        customerEmail: customerEmail.value.trim()
+        customerEmail: customerEmail.value.trim(),
+        couponCode
       })
     });
     save('ticket', result.booking);
